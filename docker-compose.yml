@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  database:
+    image: postgres:16-alpine
+    container_name: ${DATABASE_CONTAINER}
+    restart: always
+    tty: true
+    ports:
+      - ${DATABASE_PORT}:5432
+    env_file:
+      - .${APP_ENV}.env
+    volumes:
+      - database_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${DATABASE_NAME}
+      - POSTGRES_USER=${DATABASE_USERNAME}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
+
+  api:
+    container_name: codebase_api
+    build:
+      context: .
+      dockerfile: ./dev.dockerfile
+    ports:
+      - 4000:4000
+    env_file:
+      - .${APP_ENV}.env
+    depends_on:
+      - database
+    environment:
+      - DATABASE_DSN=${DATABASE_USERNAME}:${DATABASE_PASSWORD}@${DATABASE_CONTAINER}:${DATABASE_PORT}/${DATABASE_NAME}?sslmode=disable
+    volumes:
+      - ./:/app
+volumes:
+  database_data:

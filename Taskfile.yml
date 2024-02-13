@@ -1,0 +1,161 @@
+# https://taskfile.dev
+
+version: "3"
+
+dotenv: [".development.env"]
+
+tasks:
+  # ==================================================================================== #
+  # HELPERS
+  # ==================================================================================== #
+
+  default:
+    desc: List all available tasks
+    cmds:
+      - task --list
+    silent: true
+
+  # ==================================================================================== #
+  # DEVELOPMENT
+  # ==================================================================================== #
+
+  db:migrations:new:
+    desc: Create a new database migration
+    summary: |
+      Create a new database migration
+
+      It will create a new database migration into 
+      migrations folder, the name must be provided.
+    cmds:
+      - migrate create -seq -ext=.sql -dir=./assets/migrations {{.CLI_ARGS}}
+    silent: true
+
+  db:migrations:up:
+    desc: Apply all migrations to database
+    summary: |
+      Apply all migrations to database
+
+      It will apply all migrations to the database
+      or up to n number of migrations passed as argument.
+    cmds:
+      - migrate -path ./assets/migrations -database="postgres://${DATABASE_DSN}" -verbose up {{.CLI_ARGS}}
+    silent: true
+
+  db:migrations:down:
+    desc: Revert last igration in database
+    summary: |
+      Revert last migration in database
+
+      It will revert the last migration in the database.
+    cmds:
+      - migrate -path ./assets/migrations -database="postgres://${DATABASE_DSN}" -verbose down
+    silent: true
+
+  db:migrations:down:all:
+    desc: Revert all migrations in the database
+    summary: |
+      Revert all migrations in the database
+
+      It will revert all migrations and erase all data
+      in the database.
+    cmds:
+      - migrate -path ./assets/migrations -database="postgres://${DATABASE_DSN}" -verbose down --all
+    silent: true
+
+  db:init:
+    desc: Insert initial values in database
+    summary: |
+      Insert initial values in database
+
+      It will create all roles and the root user in the database
+    cmds:
+      - go run ./db/init/init.go --dsn=${DATABASE_DSN} --root-name=${ROOT_USER_NAME} --root-password=${ROOT_USER_PASSWORD} --root-email=${ROOT_USER_EMAIL}
+    silent: true
+
+  db:seed:
+    desc: Seed development database
+    summary: |
+      Seed development database
+
+      It will run sql statements to popoulate the
+      database with fake data.
+    cmds:
+      - go run ./db/seed/seed.go -dsn=${DATABASE_DSN}
+    silent: true
+
+  dev:
+    summary: |
+      Starts the api in development mode
+
+      It will start the api in development mode
+      watching for file changes. This command is
+      used alongside docker to build the development
+      environment in Dockerfile.
+    cmds:
+      - CompileDaemon -build="go build -o ./tmp/api ./cmd/api" -command="./tmp/api -base-url="http://localhost:4000" -http-port=${PORT} -db-dsn=${DATABASE_DSN} -smtp-host=${SMPT_HOST} -smtp-port=${SMPT_PORT} -smtp-username=${SMTP_USERNAME} -smtp-password=${SMTP_PASSWORD} -smtp-from=${SMTP_SENDER} -cors-trusted-origins=${CORS_TRUSTED_ORIGINS}"
+    silent: true
+
+  up:
+    desc: Starts development environment with docker compose
+    summary: |
+      Starts development environment with docker compose
+
+      It will starts database and api containers with
+      docker compose. The api will be in development
+      mode watching for file changes.
+    cmds:
+      - docker compose --env-file ./.${APP_ENV}.env up -d database api
+    silent: true
+
+  stop:
+    desc: Stops development environment with docker compose
+    summary: |
+      Stops development environment with docker compose
+
+      It will stops database and api containers with
+      docker compose.
+    cmds:
+      - docker compose --env-file ./.${APP_ENV}.env stop database api
+    silent: true
+
+  # ==================================================================================== #
+  # QUALITY CONTROL
+  # ==================================================================================== #
+
+  vendor:
+    desc: "Tidy and vendor dependencies"
+    cmds:
+      - echo "Tidying and verifying module dependencies..."
+      - go mod tidy
+      - go mod verify
+      - echo "Vendoring dependencies..."
+      - go mod vendor
+    silent: true
+
+  test:integration:
+    desc: "Run integration tests"
+    dotenv: [".test.env"]
+    cmds:
+      - docker compose --env-file ./.${APP_ENV}.env up -d database_test
+      - gotestsum --format testname './...' -tags=integration -db-dsn=${DATABASE_DSN} {{.CLI_ARGS}}
+      - docker compose --env-file ./.${APP_ENV}.env stop database_test
+    silent: true
+
+  audit:
+    desc: "Tidy dependencies and format, vet and test all code"
+    summary: |
+      Tidy dependencies and format, vet and test all code
+
+      It will tidy dependencies and verify their check sums,
+      format the code with the official format tool for Go and
+      run static analysis in the project, and run all tests.
+    cmds:
+      - task vendor
+      - echo "Formatting code..."
+      - go fmt ./...
+      - echo "Vetting code..."
+      - go vet ./...
+      - staticcheck ./...
+
+      - go test -race -vet=off ./...
+    silent: true

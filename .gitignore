@@ -1,0 +1,6 @@
+.development.env
+.test.env
+/bin
+/tmp
+
+*.DS_STORE
