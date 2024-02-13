@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/brGuirra/uai/internal/database"
+	database "github.com/brGuirra/uai/internal/database/sqlc"
 )
 
 type contextKey string
@@ -13,16 +13,16 @@ const (
 	authenticatedUserContextKey = contextKey("authenticatedUser")
 )
 
-func contextSetAuthenticatedUser(r *http.Request, user *database.User) *http.Request {
-	ctx := context.WithValue(r.Context(), authenticatedUserContextKey, user)
+func contextSetAuthenticatedUser(r *http.Request, employee *database.Employee) *http.Request {
+	ctx := context.WithValue(r.Context(), authenticatedUserContextKey, employee)
 	return r.WithContext(ctx)
 }
 
-func contextGetAuthenticatedUser(r *http.Request) *database.User {
-	user, ok := r.Context().Value(authenticatedUserContextKey).(*database.User)
+func contextGetAuthenticatedUser(r *http.Request) *database.Employee {
+	employee, ok := r.Context().Value(authenticatedUserContextKey).(*database.Employee)
 	if !ok {
 		return nil
 	}
 
-	return user
+	return employee
 }

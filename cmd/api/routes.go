@@ -19,6 +19,8 @@ func (app *application) routes() http.Handler {
 
 	v1Router.Get("/v1/healthcheck", app.healthcheckHandler)
 
+	v1Router.Post("/v1/employees", app.createEmployeeHandler)
+
 	// mux.Group(func(mux chi.Router) {
 	// 	mux.Use(app.authenticate)
 	// 	mux.Use(app.requireAuthenticatedUser)

@@ -4,5 +4,5 @@ import (
 	"embed"
 )
 
-//go:embed "emails" "migrations"
+//go:embed "emails"
 var EmbeddedFiles embed.FS

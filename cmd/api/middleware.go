@@ -1,14 +1,15 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/brGuirra/uai/internal/response"
+	"github.com/google/uuid"
 
 	"github.com/pascaldekloe/jwt"
 	"github.com/tomasen/realip"
@@ -80,21 +81,18 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 					return
 				}
 
-				userID, err := strconv.Atoi(claims.Subject)
+				emplooyeId := uuid.MustParse(claims.Subject)
+
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+
+				emplooyee, err := app.store.GetEmployeeByID(ctx, emplooyeId)
 				if err != nil {
 					app.serverError(w, r, err)
 					return
 				}
 
-				user, found, err := app.db.GetUser(userID)
-				if err != nil {
-					app.serverError(w, r, err)
-					return
-				}
-
-				if found {
-					r = contextSetAuthenticatedUser(r, user)
-				}
+				r = contextSetAuthenticatedUser(r, &emplooyee)
 			}
 		}
 

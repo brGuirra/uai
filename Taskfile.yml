@@ -69,7 +69,7 @@ tasks:
 
       It will create all roles and the root user in the database
     cmds:
-      - go run ./db/init/init.go --dsn=${DATABASE_DSN} --root-name=${ROOT_USER_NAME} --root-password=${ROOT_USER_PASSWORD} --root-email=${ROOT_USER_EMAIL}
+      - go run ./internal/database/init/init.go -db-dsn="${DATABASE_DSN}" -root-name=${ROOT_USER_NAME} -root-password="${ROOT_USER_PASSWORD}" -root-email="${ROOT_USER_EMAIL}" -roles="${APPLICATION_ROLES}"
     silent: true
 
   db:seed:
@@ -80,7 +80,7 @@ tasks:
       It will run sql statements to popoulate the
       database with fake data.
     cmds:
-      - go run ./db/seed/seed.go -dsn=${DATABASE_DSN}
+      - go run ./db/seed/seed.go -db-dsn="${DATABASE_DSN}"
     silent: true
 
   dev:
@@ -137,7 +137,7 @@ tasks:
     dotenv: [".test.env"]
     cmds:
       - docker compose --env-file ./.${APP_ENV}.env up -d database_test
-      - gotestsum --format testname './...' -tags=integration -db-dsn=${DATABASE_DSN} {{.CLI_ARGS}}
+      - gotestsum --format testname './...' -tags=integration -db-dsn="${DATABASE_DSN}" {{.CLI_ARGS}}
       - docker compose --env-file ./.${APP_ENV}.env stop database_test
     silent: true
 

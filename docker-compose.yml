@@ -18,7 +18,7 @@ services:
       - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
 
   api:
-    container_name: codebase_api
+    container_name: uai_api
     build:
       context: .
       dockerfile: ./dev.dockerfile

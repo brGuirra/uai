@@ -1,40 +1,26 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"net/http"
-	"strconv"
 	"time"
 
+	database "github.com/brGuirra/uai/internal/database/sqlc"
 	"github.com/brGuirra/uai/internal/password"
 	"github.com/brGuirra/uai/internal/request"
 	"github.com/brGuirra/uai/internal/response"
 	"github.com/brGuirra/uai/internal/validator"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/pascaldekloe/jwt"
 )
 
-func (app *application) healthcheckHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Caiu aqui")
-
-	data := map[string]any{
-		"status": "available",
-		"systemInfo": map[string]string{
-			"enviroment": app.config.env,
-			"version":    version,
-		},
-	}
-
-	err := response.JSON(w, http.StatusOK, data)
-	if err != nil {
-		app.serverError(w, r, err)
-	}
-}
-
-func (app *application) createUser(w http.ResponseWriter, r *http.Request) {
+func (app *application) createEmployeeHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
-		Email     string              `json:"Email"`
-		Password  string              `json:"Password"`
+		Name      string              `json:"name"`
+		Email     string              `json:"email"`
+		Password  string              `json:"password"`
+		Roles     []string            `json:"roles"`
 		Validator validator.Validator `json:"-"`
 	}
 
@@ -44,7 +30,10 @@ func (app *application) createUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, found, err := app.db.GetUserByEmail(input.Email)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	exists, err := app.store.CheckEmployeeEmailExists(ctx, input.Email)
 	if err != nil {
 		app.serverError(w, r, err)
 		return
@@ -52,25 +41,25 @@ func (app *application) createUser(w http.ResponseWriter, r *http.Request) {
 
 	input.Validator.CheckField(input.Email != "", "Email", "Email is required")
 	input.Validator.CheckField(validator.Matches(input.Email, validator.RgxEmail), "Email", "Must be a valid email address")
-	input.Validator.CheckField(!found, "Email", "Email is already in use")
+	input.Validator.CheckField(!exists, "Email", "Email is already in use")
 
 	input.Validator.CheckField(input.Password != "", "Password", "Password is required")
 	input.Validator.CheckField(len(input.Password) >= 8, "Password", "Password is too short")
 	input.Validator.CheckField(len(input.Password) <= 72, "Password", "Password is too long")
 	input.Validator.CheckField(validator.NotIn(input.Password, password.CommonPasswords...), "Password", "Password is too common")
+	input.Validator.CheckField(validator.AllIn(input.Roles, "staff", "leader", "employee"), "Roles", "Invalid role, must be 'staff', 'leader' or 'employee'")
 
 	if input.Validator.HasErrors() {
 		app.failedValidation(w, r, input.Validator)
 		return
 	}
 
-	hashedPassword, err := password.Hash(input.Password)
-	if err != nil {
-		app.serverError(w, r, err)
-		return
-	}
-
-	_, err = app.db.InsertUser(input.Email, hashedPassword)
+	_, err = app.store.CreateEmployee(ctx, database.CreateEmployeeParams{
+		Name:           input.Name,
+		Email:          input.Email,
+		Status:         "unverified",
+		HashedPassword: pgtype.Text{},
+	})
 	if err != nil {
 		app.serverError(w, r, err)
 		return
@@ -92,25 +81,26 @@ func (app *application) createAuthenticationToken(w http.ResponseWriter, r *http
 		return
 	}
 
-	user, found, err := app.db.GetUserByEmail(input.Email)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	employee, err := app.store.GetEmployeeByEmail(ctx, input.Email)
 	if err != nil {
 		app.serverError(w, r, err)
 		return
 	}
 
 	input.Validator.CheckField(input.Email != "", "Email", "Email is required")
-	input.Validator.CheckField(found, "Email", "Email address could not be found")
+	input.Validator.CheckField(employee.Email != "", "Email", "Email address could not be found")
 
-	if found {
-		passwordMatches, err := password.Matches(input.Password, user.HashedPassword)
-		if err != nil {
-			app.serverError(w, r, err)
-			return
-		}
-
-		input.Validator.CheckField(input.Password != "", "Password", "Password is required")
-		input.Validator.CheckField(passwordMatches, "Password", "Password is incorrect")
+	passwordMatches, err := password.Matches(input.Password, employee.HashedPassword.String)
+	if err != nil {
+		app.serverError(w, r, err)
+		return
 	}
+
+	input.Validator.CheckField(input.Password != "", "Password", "Password is required")
+	input.Validator.CheckField(passwordMatches, "Password", "Password is incorrect")
 
 	if input.Validator.HasErrors() {
 		app.failedValidation(w, r, input.Validator)
@@ -118,7 +108,8 @@ func (app *application) createAuthenticationToken(w http.ResponseWriter, r *http
 	}
 
 	var claims jwt.Claims
-	claims.Subject = strconv.Itoa(user.ID)
+
+	claims.Subject = employee.ID.String()
 
 	expiry := time.Now().Add(24 * time.Hour)
 	claims.Issued = jwt.NewNumericTime(time.Now())

@@ -8,8 +8,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/brGuirra/uai/internal/database"
 	"github.com/brGuirra/uai/internal/smtp"
+
+	database "github.com/brGuirra/uai/internal/database/sqlc"
 )
 
 const version = "1.0.0"
@@ -47,7 +48,7 @@ type config struct {
 
 type application struct {
 	config config
-	db     *database.DB
+	store  database.Querier
 	logger *slog.Logger
 	mailer *smtp.Mailer
 	wg     sync.WaitGroup
@@ -77,11 +78,10 @@ func run(logger *slog.Logger) error {
 
 	flag.Parse()
 
-	db, err := database.New(cfg.db.dsn)
+	store, err := database.NewStore(cfg.db.dsn)
 	if err != nil {
 		return err
 	}
-	defer db.Close()
 
 	mailer, err := smtp.NewMailer(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.from)
 	if err != nil {
@@ -90,7 +90,7 @@ func run(logger *slog.Logger) error {
 
 	app := &application{
 		config: cfg,
-		db:     db,
+		store:  store,
 		logger: logger,
 		mailer: mailer,
 	}
