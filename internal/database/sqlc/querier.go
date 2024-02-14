@@ -11,14 +11,13 @@ import (
 )
 
 type Querier interface {
-	AddRolesForEmployee(ctx context.Context, arg []AddRolesForEmployeeParams) (int64, error)
-	CheckEmployeeEmailExists(ctx context.Context, email string) (bool, error)
-	CreateEmployee(ctx context.Context, arg CreateEmployeeParams) (CreateEmployeeRow, error)
+	CheckUserEmailExists(ctx context.Context, email string) (bool, error)
 	CreateRoles(ctx context.Context, code []string) (int64, error)
-	GetEmployeeByEmail(ctx context.Context, email string) (Employee, error)
-	GetEmployeeByID(ctx context.Context, id uuid.UUID) (Employee, error)
+	CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error)
 	GetRoles(ctx context.Context) ([]Role, error)
-	UpdateEmployee(ctx context.Context, arg UpdateEmployeeParams) error
+	GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error)
+	GetUserByID(ctx context.Context, id uuid.UUID) (GetUserByIDRow, error)
+	UpdateUser(ctx context.Context, arg UpdateUserParams) error
 }
 
 var _ Querier = (*Queries)(nil)

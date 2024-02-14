@@ -10,7 +10,7 @@ import (
 )
 
 const getRoles = `-- name: GetRoles :many
-SELECT id, code
+SELECT id, code, description
 FROM roles
 ORDER BY id
 `
@@ -24,7 +24,7 @@ func (q *Queries) GetRoles(ctx context.Context) ([]Role, error) {
 	items := []Role{}
 	for rows.Next() {
 		var i Role
-		if err := rows.Scan(&i.ID, &i.Code); err != nil {
+		if err := rows.Scan(&i.ID, &i.Code, &i.Description); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

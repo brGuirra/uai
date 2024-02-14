@@ -9,22 +9,19 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type Absence struct {
-	ID        uuid.UUID        `json:"id"`
-	Employee  uuid.UUID        `json:"employee"`
-	Reason    string           `json:"reason"`
-	FromDate  pgtype.Date      `json:"from_date"`
-	ToDate    pgtype.Date      `json:"to_date"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
+type Permission struct {
+	ID          uuid.UUID `json:"id"`
+	Action      string    `json:"action"`
+	Description string    `json:"description"`
 }
 
-type AttendanceRecord struct {
-	ID        uuid.UUID        `json:"id"`
-	Employee  uuid.UUID        `json:"employee"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
+type Role struct {
+	ID          uuid.UUID `json:"id"`
+	Code        string    `json:"code"`
+	Description string    `json:"description"`
 }
 
-type Employee struct {
+type User struct {
 	ID             uuid.UUID   `json:"id"`
 	Name           string      `json:"name"`
 	Email          string      `json:"email"`
@@ -32,23 +29,9 @@ type Employee struct {
 	Status         string      `json:"status"`
 }
 
-type EmployeesRole struct {
-	EmployeeID uuid.UUID        `json:"employee_id"`
-	RoleID     uuid.UUID        `json:"role_id"`
-	Grantor    uuid.UUID        `json:"grantor"`
-	CreatedAt  pgtype.Timestamp `json:"created_at"`
-}
-
-type Role struct {
-	ID   uuid.UUID `json:"id"`
-	Code string    `json:"code"`
-}
-
-type Ticket struct {
-	ID        uuid.UUID        `json:"id"`
-	Requester uuid.UUID        `json:"requester"`
-	Attendant uuid.NullUUID    `json:"attendant"`
-	Status    string           `json:"status"`
-	UpdatedAt pgtype.Timestamp `json:"updated_at"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
+type UsersRole struct {
+	UserID    uuid.UUID        `json:"user_id"`
+	RoleID    uuid.UUID        `json:"role_id"`
+	Grantor   uuid.UUID        `json:"grantor"`
+	GrantedAt pgtype.Timestamp `json:"granted_at"`
 }

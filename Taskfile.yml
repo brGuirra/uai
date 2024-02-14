@@ -24,42 +24,49 @@ tasks:
     summary: |
       Create a new database migration
 
-      It will create a new database migration into 
+      It will create a new database migration into
       migrations folder, the name must be provided.
     cmds:
-      - migrate create -seq -ext=.sql -dir=./assets/migrations {{.CLI_ARGS}}
+      - migrate create -seq -ext=.sql -dir=./internal/database/migrations {{.CLI_ARGS}}
     silent: true
 
   db:migrations:up:
-    desc: Apply all migrations to database
+    desc: Apply all or N up migrations
     summary: |
-      Apply all migrations to database
+      Apply all or N up migrations
 
-      It will apply all migrations to the database
+      It will apply all or N migrations to the database
       or up to n number of migrations passed as argument.
     cmds:
-      - migrate -path ./assets/migrations -database="postgres://${DATABASE_DSN}" -verbose up {{.CLI_ARGS}}
+      - migrate -path ./internal/database/migrations -database="postgres://${DATABASE_DSN}" -verbose up {{.CLI_ARGS}}
     silent: true
 
   db:migrations:down:
-    desc: Revert last igration in database
+    desc: Revert all or N migrations in database
     summary: |
-      Revert last migration in database
+      Revert all or N migrations in database
 
-      It will revert the last migration in the database.
+      It will revert all or N migrations in the database.
     cmds:
-      - migrate -path ./assets/migrations -database="postgres://${DATABASE_DSN}" -verbose down
+      - migrate -path ./internal/database/migrations -database="postgres://${DATABASE_DSN}" -verbose down {{.CLI_ARGS}}
     silent: true
 
-  db:migrations:down:all:
-    desc: Revert all migrations in the database
+  db:migrations:drop:
+    desc: Drop the all tables in the database
     summary: |
-      Revert all migrations in the database
+      Drop the all tables in the database
 
-      It will revert all migrations and erase all data
-      in the database.
+      It will drop all tables in the database, including the migrations one.
     cmds:
-      - migrate -path ./assets/migrations -database="postgres://${DATABASE_DSN}" -verbose down --all
+      - migrate -path ./internal/database/migrations -database="postgres://${DATABASE_DSN}" -verbose drop -f
+    silent: true
+
+  db:generate:
+    desc: Generate Go code to interact with database using sqlc
+    summary: |
+      Generate Go code to interact with database using sqlc.
+    cmds:
+      - sqlc generate
     silent: true
 
   db:init:
@@ -67,7 +74,7 @@ tasks:
     summary: |
       Insert initial values in database
 
-      It will create all roles and the root user in the database
+      It will create all roles and the root user in the database.
     cmds:
       - go run ./internal/database/init/init.go -db-dsn="${DATABASE_DSN}" -root-name=${ROOT_USER_NAME} -root-password="${ROOT_USER_PASSWORD}" -root-email="${ROOT_USER_EMAIL}" -roles="${APPLICATION_ROLES}"
     silent: true
@@ -92,7 +99,7 @@ tasks:
       used alongside docker to build the development
       environment in Dockerfile.
     cmds:
-      - CompileDaemon -build="go build -o ./tmp/api ./cmd/api" -command="./tmp/api -base-url="http://localhost:4000" -http-port=${PORT} -db-dsn=${DATABASE_DSN} -smtp-host=${SMPT_HOST} -smtp-port=${SMPT_PORT} -smtp-username=${SMTP_USERNAME} -smtp-password=${SMTP_PASSWORD} -smtp-from=${SMTP_SENDER} -cors-trusted-origins=${CORS_TRUSTED_ORIGINS}"
+      - CompileDaemon -build="go build -o ./tmp/api ./cmd/api" -command="./tmp/api -base-url="http://localhost:4000" -http-port=${PORT} -db-dsn="${DATABASE_DSN}" -smtp-host="${SMPT_HOST}" -smtp-port="${SMPT_PORT}" -smtp-username="${SMTP_USERNAME}" -smtp-password="${SMTP_PASSWORD}" -smtp-from="${SMTP_SENDER}" -cors-trusted-origins="${CORS_TRUSTED_ORIGINS}"
     silent: true
 
   up:

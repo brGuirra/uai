@@ -9,40 +9,6 @@ import (
 	"context"
 )
 
-// iteratorForAddRolesForEmployee implements pgx.CopyFromSource.
-type iteratorForAddRolesForEmployee struct {
-	rows                 []AddRolesForEmployeeParams
-	skippedFirstNextCall bool
-}
-
-func (r *iteratorForAddRolesForEmployee) Next() bool {
-	if len(r.rows) == 0 {
-		return false
-	}
-	if !r.skippedFirstNextCall {
-		r.skippedFirstNextCall = true
-		return true
-	}
-	r.rows = r.rows[1:]
-	return len(r.rows) > 0
-}
-
-func (r iteratorForAddRolesForEmployee) Values() ([]interface{}, error) {
-	return []interface{}{
-		r.rows[0].EmployeeID,
-		r.rows[0].RoleID,
-		r.rows[0].Grantor,
-	}, nil
-}
-
-func (r iteratorForAddRolesForEmployee) Err() error {
-	return nil
-}
-
-func (q *Queries) AddRolesForEmployee(ctx context.Context, arg []AddRolesForEmployeeParams) (int64, error) {
-	return q.db.CopyFrom(ctx, []string{"employees_roles"}, []string{"employee_id", "role_id", "grantor"}, &iteratorForAddRolesForEmployee{rows: arg})
-}
-
 // iteratorForCreateRoles implements pgx.CopyFromSource.
 type iteratorForCreateRoles struct {
 	rows                 []string
