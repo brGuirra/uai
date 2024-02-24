@@ -12,17 +12,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const checkUserEmailExists = `-- name: CheckUserEmailExists :one
-SELECT EXISTS(SELECT 1 FROM "users" WHERE "email" = $1) AS "user_exists"
-`
-
-func (q *Queries) CheckUserEmailExists(ctx context.Context, email string) (bool, error) {
-	row := q.db.QueryRow(ctx, checkUserEmailExists, email)
-	var user_exists bool
-	err := row.Scan(&user_exists)
-	return user_exists, err
-}
-
 const createUser = `-- name: CreateUser :one
 INSERT INTO
 "users" ("name", "email", "status", "hashed_password")

@@ -1,9 +1,9 @@
 INSERT INTO "roles"
-("code", "description")
+("display_name", "description")
 VALUES (
     'staff',
     'An employee from HR with permissions to solve'
-    || 'tickets and check attendance records'
+    || 'tickets and check attendance records of all employees'
 ),
 (
     'leader',

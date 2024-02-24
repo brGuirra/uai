@@ -33,6 +33,3 @@ SELECT
     "hashed_password"
 FROM "users"
 WHERE "email" = $1;
-
--- name: CheckUserEmailExists :one
-SELECT EXISTS(SELECT 1 FROM "users" WHERE "email" = $1) AS "user_exists";

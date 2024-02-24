@@ -11,14 +11,19 @@ import (
 
 type Permission struct {
 	ID          uuid.UUID `json:"id"`
-	Action      string    `json:"action"`
+	DisplayName string    `json:"display_name"`
 	Description string    `json:"description"`
 }
 
 type Role struct {
 	ID          uuid.UUID `json:"id"`
-	Code        string    `json:"code"`
+	DisplayName string    `json:"display_name"`
 	Description string    `json:"description"`
+}
+
+type RolesPermission struct {
+	RoleID       uuid.UUID `json:"role_id"`
+	PermissionID uuid.UUID `json:"permission_id"`
 }
 
 type User struct {

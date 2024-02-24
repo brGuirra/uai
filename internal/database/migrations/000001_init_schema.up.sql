@@ -10,13 +10,7 @@ CREATE TABLE IF NOT EXISTS "users" (
 
 CREATE TABLE IF NOT EXISTS "roles" (
     "id" uuid PRIMARY KEY DEFAULT (uuid_generate_v4()),
-    "code" varchar NOT NULL,
-    "description" varchar NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS "permissions" (
-    "id" uuid PRIMARY KEY DEFAULT (uuid_generate_v4()),
-    "action" varchar NOT NULL,
+    "display_name" varchar NOT NULL,
     "description" varchar NOT NULL
 );
 
@@ -28,7 +22,36 @@ CREATE TABLE IF NOT EXISTS "users_roles" (
     PRIMARY KEY ("user_id", "role_id")
 );
 
-ALTER TABLE "users_roles"
-ADD CONSTRAINT "user_role" FOREIGN KEY ("user_id") REFERENCES "users" (
+CREATE TABLE IF NOT EXISTS "permissions" (
+    "id" uuid PRIMARY KEY DEFAULT (uuid_generate_v4()),
+    "display_name" varchar NOT NULL,
+    "description" varchar NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS "roles_permissions" (
+    "role_id" uuid NOT NULL,
+    "permission_id" uuid NOT NULL,
+    PRIMARY KEY ("role_id", "permission_id")
+);
+
+ALTER TABLE "users_roles" ADD CONSTRAINT "user_role" FOREIGN KEY (
+    "user_id"
+) REFERENCES "users" (
     "id"
 );
+
+ALTER TABLE "users_roles" ADD CONSTRAINT "role_user" FOREIGN KEY (
+    "role_id"
+) REFERENCES "roles" ("id");
+
+ALTER TABLE "users_roles" ADD CONSTRAINT "role_grantor" FOREIGN KEY (
+    "grantor"
+) REFERENCES "users" ("id");
+
+ALTER TABLE "roles_permissions" ADD CONSTRAINT "role_permission" FOREIGN KEY (
+    "role_id"
+) REFERENCES "roles" ("id");
+
+ALTER TABLE "roles_permissions" ADD CONSTRAINT "permission_role" FOREIGN KEY (
+    "permission_id"
+) REFERENCES "permissions" ("id");

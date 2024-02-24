@@ -11,10 +11,7 @@ import (
 )
 
 type Querier interface {
-	CheckUserEmailExists(ctx context.Context, email string) (bool, error)
-	CreateRoles(ctx context.Context, code []string) (int64, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error)
-	GetRoles(ctx context.Context) ([]Role, error)
 	GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (GetUserByIDRow, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) error

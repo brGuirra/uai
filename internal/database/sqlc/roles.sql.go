@@ -10,9 +10,11 @@ import (
 )
 
 const getRoles = `-- name: GetRoles :many
-SELECT id, code, description
+SELECT
+    "id",
+    "code",
+    "description"
 FROM roles
-ORDER BY id
 `
 
 func (q *Queries) GetRoles(ctx context.Context) ([]Role, error) {
