@@ -1,20 +1,22 @@
-INSERT INTO "permissions" ("display_name", "description") VALUES
-(
-    'admin',
-    'Allows full access to the system, including the ability'
-    || 'to promote other users to admin level'
-),
-('user_manager', 'Allows an user to create and edit another users'),
-(
-    'ticket_manager', 'Allows an user to view, solve and close tickets'
-),
-(
-    'ticket_issuer', 'Allows an user to open, view and close their tickets'
-    || 'own tickets'
-),
-('attendance_manager', 'Allows an user to view and edit attendance records'),
-(
-    'attendance_registration',
-    'Allows an user to register and view their own attendance'
-    || 'records'
+CREATE TABLE "permissions" (
+    "id" uuid PRIMARY KEY DEFAULT (uuid_generate_v4()),
+    "code" varchar UNIQUE NOT NULL,
+    "description" varchar NOT NULL,
+    "created_at" timestamp NOT NULL DEFAULT (now())
 );
+
+CREATE TABLE "permissions_roles" (
+    "role_id" uuid NOT NULL,
+    "permission_id" uuid NOT NULL,
+    "deleted_at" timestamp DEFAULT null,
+    "created_at" timestamp NOT NULL DEFAULT (now()),
+    PRIMARY KEY ("role_id", "permission_id")
+);
+
+ALTER TABLE "permissions_roles" ADD CONSTRAINT "permission_role" FOREIGN KEY (
+    "permission_id"
+) REFERENCES "permissions" ("id");
+
+ALTER TABLE "permissions_roles" ADD CONSTRAINT "role_permission" FOREIGN KEY (
+    "role_id"
+) REFERENCES "roles" ("id");
