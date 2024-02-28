@@ -7,135 +7,21 @@ package database
 
 import (
 	"context"
-
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createUser = `-- name: CreateUser :one
+const createUser = `-- name: CreateUser :exec
 INSERT INTO
-"users" ("name", "email", "status", "hashed_password")
+"users" ("name", "email")
 VALUES
-($1, $2, $3, $4)
-RETURNING "id", "name", "email", "status"
+($1, $2)
 `
 
 type CreateUserParams struct {
-	Name           string      `json:"name"`
-	Email          string      `json:"email"`
-	Status         string      `json:"status"`
-	HashedPassword pgtype.Text `json:"hashed_password"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
 }
 
-type CreateUserRow struct {
-	ID     uuid.UUID `json:"id"`
-	Name   string    `json:"name"`
-	Email  string    `json:"email"`
-	Status string    `json:"status"`
-}
-
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
-	row := q.db.QueryRow(ctx, createUser,
-		arg.Name,
-		arg.Email,
-		arg.Status,
-		arg.HashedPassword,
-	)
-	var i CreateUserRow
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.Email,
-		&i.Status,
-	)
-	return i, err
-}
-
-const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT
-    "name",
-    "email",
-    "status",
-    "hashed_password"
-FROM "users"
-WHERE "email" = $1
-`
-
-type GetUserByEmailRow struct {
-	Name           string      `json:"name"`
-	Email          string      `json:"email"`
-	Status         string      `json:"status"`
-	HashedPassword pgtype.Text `json:"hashed_password"`
-}
-
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
-	row := q.db.QueryRow(ctx, getUserByEmail, email)
-	var i GetUserByEmailRow
-	err := row.Scan(
-		&i.Name,
-		&i.Email,
-		&i.Status,
-		&i.HashedPassword,
-	)
-	return i, err
-}
-
-const getUserByID = `-- name: GetUserByID :one
-SELECT
-    "name",
-    "email",
-    "status",
-    "hashed_password"
-FROM "users"
-WHERE "id" = $1
-`
-
-type GetUserByIDRow struct {
-	Name           string      `json:"name"`
-	Email          string      `json:"email"`
-	Status         string      `json:"status"`
-	HashedPassword pgtype.Text `json:"hashed_password"`
-}
-
-func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (GetUserByIDRow, error) {
-	row := q.db.QueryRow(ctx, getUserByID, id)
-	var i GetUserByIDRow
-	err := row.Scan(
-		&i.Name,
-		&i.Email,
-		&i.Status,
-		&i.HashedPassword,
-	)
-	return i, err
-}
-
-const updateUser = `-- name: UpdateUser :exec
-UPDATE "users"
-SET
-    "name" = $2,
-    "email" = $3,
-    "hashed_password" = $4,
-    "status" = $5
-WHERE
-    "id" = $1
-RETURNING "id", "name", "email", "status"
-`
-
-type UpdateUserParams struct {
-	ID             uuid.UUID   `json:"id"`
-	Name           string      `json:"name"`
-	Email          string      `json:"email"`
-	HashedPassword pgtype.Text `json:"hashed_password"`
-	Status         string      `json:"status"`
-}
-
-func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
-	_, err := q.db.Exec(ctx, updateUser,
-		arg.ID,
-		arg.Name,
-		arg.Email,
-		arg.HashedPassword,
-		arg.Status,
-	)
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
+	_, err := q.db.Exec(ctx, createUser, arg.Name, arg.Email)
 	return err
 }

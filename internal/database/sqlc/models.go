@@ -5,38 +5,253 @@
 package database
 
 import (
+	"database/sql/driver"
+	"fmt"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type Permission struct {
-	ID          uuid.UUID `json:"id"`
-	DisplayName string    `json:"display_name"`
-	Description string    `json:"description"`
+type TicketReason string
+
+const (
+	TicketReasonForgot     TicketReason = "forgot"
+	TicketReasonSystemDown TicketReason = "system_down"
+)
+
+func (e *TicketReason) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TicketReason(s)
+	case string:
+		*e = TicketReason(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TicketReason: %T", src)
+	}
+	return nil
+}
+
+type NullTicketReason struct {
+	TicketReason TicketReason `json:"ticket_reason"`
+	Valid        bool         `json:"valid"` // Valid is true if TicketReason is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTicketReason) Scan(value interface{}) error {
+	if value == nil {
+		ns.TicketReason, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TicketReason.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTicketReason) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TicketReason), nil
+}
+
+type TicketStatus string
+
+const (
+	TicketStatusPending  TicketStatus = "pending"
+	TicketStatusApproved TicketStatus = "approved"
+	TicketStatusRejected TicketStatus = "rejected"
+	TicketStatusClosed   TicketStatus = "closed"
+)
+
+func (e *TicketStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TicketStatus(s)
+	case string:
+		*e = TicketStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TicketStatus: %T", src)
+	}
+	return nil
+}
+
+type NullTicketStatus struct {
+	TicketStatus TicketStatus `json:"ticket_status"`
+	Valid        bool         `json:"valid"` // Valid is true if TicketStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTicketStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.TicketStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TicketStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTicketStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TicketStatus), nil
+}
+
+type TokenScope string
+
+const (
+	TokenScopeActivation     TokenScope = "activation"
+	TokenScopeAuthentication TokenScope = "authentication"
+)
+
+func (e *TokenScope) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TokenScope(s)
+	case string:
+		*e = TokenScope(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TokenScope: %T", src)
+	}
+	return nil
+}
+
+type NullTokenScope struct {
+	TokenScope TokenScope `json:"token_scope"`
+	Valid      bool       `json:"valid"` // Valid is true if TokenScope is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTokenScope) Scan(value interface{}) error {
+	if value == nil {
+		ns.TokenScope, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TokenScope.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTokenScope) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TokenScope), nil
+}
+
+type UserStatus string
+
+const (
+	UserStatusCreated        UserStatus = "created"
+	UserStatusActive         UserStatus = "active"
+	UserStatusFormerEmployee UserStatus = "former_employee"
+)
+
+func (e *UserStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = UserStatus(s)
+	case string:
+		*e = UserStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for UserStatus: %T", src)
+	}
+	return nil
+}
+
+type NullUserStatus struct {
+	UserStatus UserStatus `json:"user_status"`
+	Valid      bool       `json:"valid"` // Valid is true if UserStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullUserStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.UserStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.UserStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullUserStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.UserStatus), nil
+}
+
+type AttendanceRecord struct {
+	ID        uuid.UUID        `json:"id"`
+	Employee  uuid.UUID        `json:"employee"`
+	PuchTime  pgtype.Timestamp `json:"puch_time"`
+	TicketID  uuid.NullUUID    `json:"ticket_id"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+}
+
+type Credential struct {
+	ID             uuid.UUID        `json:"id"`
+	UserID         uuid.UUID        `json:"user_id"`
+	Email          string           `json:"email"`
+	HashedPassword string           `json:"hashed_password"`
+	LoginAttempts  int16            `json:"login_attempts"`
+	Version        int32            `json:"version"`
+	UpdatedAt      pgtype.Timestamp `json:"updated_at"`
+	CreatedAt      pgtype.Timestamp `json:"created_at"`
+}
+
+type Profile struct {
+	ID        uuid.UUID        `json:"id"`
+	UserID    uuid.UUID        `json:"user_id"`
+	Nickname  string           `json:"nickname"`
+	Picture   pgtype.Text      `json:"picture"`
+	Bio       pgtype.Text      `json:"bio"`
+	Version   int32            `json:"version"`
+	UpdatedAt pgtype.Timestamp `json:"updated_at"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
 }
 
 type Role struct {
-	ID          uuid.UUID `json:"id"`
-	DisplayName string    `json:"display_name"`
-	Description string    `json:"description"`
+	ID          uuid.UUID        `json:"id"`
+	DisplayName string           `json:"display_name"`
+	CreatedAt   pgtype.Timestamp `json:"created_at"`
 }
 
-type RolesPermission struct {
-	RoleID       uuid.UUID `json:"role_id"`
-	PermissionID uuid.UUID `json:"permission_id"`
+type Ticket struct {
+	ID        uuid.UUID        `json:"id"`
+	Requester uuid.UUID        `json:"requester"`
+	Attendant uuid.NullUUID    `json:"attendant"`
+	Status    TicketStatus     `json:"status"`
+	PunchTime pgtype.Timestamp `json:"punch_time"`
+	Reason    TicketReason     `json:"reason"`
+	UpdatedAt pgtype.Timestamp `json:"updated_at"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
+}
+
+type Token struct {
+	ID     uuid.UUID        `json:"id"`
+	Hash   []byte           `json:"hash"`
+	UserID uuid.UUID        `json:"user_id"`
+	Expiry pgtype.Timestamp `json:"expiry"`
+	Scope  NullTokenScope   `json:"scope"`
 }
 
 type User struct {
-	ID             uuid.UUID   `json:"id"`
-	Name           string      `json:"name"`
-	Email          string      `json:"email"`
-	HashedPassword pgtype.Text `json:"hashed_password"`
-	Status         string      `json:"status"`
+	ID        uuid.UUID        `json:"id"`
+	Name      string           `json:"name"`
+	Email     string           `json:"email"`
+	Status    UserStatus       `json:"status"`
+	Version   int32            `json:"version"`
+	UpdatedAt pgtype.Timestamp `json:"updated_at"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
 }
 
 type UsersRole struct {
 	UserID    uuid.UUID        `json:"user_id"`
 	RoleID    uuid.UUID        `json:"role_id"`
 	Grantor   uuid.UUID        `json:"grantor"`
-	GrantedAt pgtype.Timestamp `json:"granted_at"`
+	DeletedAt pgtype.Timestamp `json:"deleted_at"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
 }
