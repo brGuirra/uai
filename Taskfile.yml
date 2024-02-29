@@ -76,7 +76,7 @@ tasks:
 
       It will create all roles and the root user in the database.
     cmds:
-      - go run ./internal/database/init/init.go -db-dsn="${DATABASE_DSN}" -root-name=${ROOT_USER_NAME} -root-password="${ROOT_USER_PASSWORD}" -root-email="${ROOT_USER_EMAIL}" -roles="${APPLICATION_ROLES}"
+      - go run ./internal/database/init/init.go -db-dsn=${DATABASE_DSN} -root-name=${ROOT_USER_NAME} -root-password=${ROOT_USER_PASSWORD} -root-email=${ROOT_USER_EMAIL}
     silent: true
 
   db:seed:
@@ -87,7 +87,7 @@ tasks:
       It will run sql statements to popoulate the
       database with fake data.
     cmds:
-      - go run ./db/seed/seed.go -db-dsn="${DATABASE_DSN}"
+      - go run ./db/seed/seed.go -db-dsn=${DATABASE_DSN}
     silent: true
 
   dev:
@@ -99,7 +99,7 @@ tasks:
       used alongside docker to build the development
       environment in Dockerfile.
     cmds:
-      - CompileDaemon -build="go build -o ./tmp/api ./cmd/api" -command="./tmp/api -base-url="http://localhost:4000" -http-port=${PORT} -db-dsn="${DATABASE_DSN}" -smtp-host="${SMPT_HOST}" -smtp-port="${SMPT_PORT}" -smtp-username="${SMTP_USERNAME}" -smtp-password="${SMTP_PASSWORD}" -smtp-from="${SMTP_SENDER}" -cors-trusted-origins="${CORS_TRUSTED_ORIGINS}"
+      - CompileDaemon -build="go build -o ./tmp/server ./cmd/server" -command="./tmp/server -db-dsn=${DATABASE_DSN} -smtp-host=${SMPT_HOST} -smtp-port=${SMPT_PORT} -smtp-username=${SMTP_USERNAME} -smtp-password=${SMTP_PASSWORD} -smtp-from=${SMTP_SENDER} -cors-trusted-origins=${CORS_TRUSTED_ORIGINS}"
     silent: true
 
   up:
@@ -111,7 +111,7 @@ tasks:
       docker compose. The api will be in development
       mode watching for file changes.
     cmds:
-      - docker compose --env-file ./.${APP_ENV}.env up -d database api
+      - docker compose --env-file ./.${ENV}.env up -d database api
     silent: true
 
   stop:
@@ -122,7 +122,7 @@ tasks:
       It will stops database and api containers with
       docker compose.
     cmds:
-      - docker compose --env-file ./.${APP_ENV}.env stop database api
+      - docker compose --env-file ./.${ENV}.env stop database api
     silent: true
 
   # ==================================================================================== #
@@ -143,9 +143,9 @@ tasks:
     desc: "Run integration tests"
     dotenv: [".test.env"]
     cmds:
-      - docker compose --env-file ./.${APP_ENV}.env up -d database_test
-      - gotestsum --format testname './...' -tags=integration -db-dsn="${DATABASE_DSN}" {{.CLI_ARGS}}
-      - docker compose --env-file ./.${APP_ENV}.env stop database_test
+      - docker compose --env-file ./.${ENV}.env up -d database_test
+      - gotestsum --format testname ./... -tags=integration -db-dsn="${DATABASE_DSN}" {{.CLI_ARGS}}
+      - docker compose --env-file ./.${ENV}.env stop database_test
     silent: true
 
   audit:

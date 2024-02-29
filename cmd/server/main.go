@@ -8,30 +8,17 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/brGuirra/uai/internal/gen/user/v1/userv1connect"
 	"github.com/brGuirra/uai/internal/smtp"
 
 	database "github.com/brGuirra/uai/internal/database/sqlc"
 )
 
-const version = "1.0.0"
-
-func main() {
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-
-	err := run(logger)
-	if err != nil {
-		trace := string(debug.Stack())
-		logger.Error(err.Error(), "trace", trace)
-		os.Exit(1)
-	}
-}
-
 type config struct {
-	baseURL  string
-	httpPort int
-	env      string
-	cors     struct{ trustedOrigins []string }
-	db       struct {
+	port int
+	env  string
+	cors struct{ trustedOrigins []string }
+	db   struct {
 		dsn string
 	}
 	jwt struct {
@@ -46,19 +33,30 @@ type config struct {
 	}
 }
 
-type application struct {
-	config config
-	store  database.Querier
-	logger *slog.Logger
-	mailer *smtp.Mailer
-	wg     sync.WaitGroup
+type uaiServer struct {
+	config  config
+	querier database.Querier
+	logger  *slog.Logger
+	mailer  *smtp.Mailer
+	wg      sync.WaitGroup
+	userv1connect.UnimplementedUserServiceHandler
+}
+
+func main() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+	err := run(logger)
+	if err != nil {
+		trace := string(debug.Stack())
+		logger.Error(err.Error(), "trace", trace)
+		os.Exit(1)
+	}
 }
 
 func run(logger *slog.Logger) error {
 	var cfg config
 
-	flag.StringVar(&cfg.baseURL, "base-url", "http://localhost:4000", "base URL for the application")
-	flag.IntVar(&cfg.httpPort, "http-port", 4000, "port to listen on for HTTP requests")
+	flag.IntVar(&cfg.port, "port", 8080, "port to listen on for HTTP requests")
 	flag.StringVar(&cfg.env, "env", "development", "environment (development|staging|production)")
 
 	flag.StringVar(&cfg.db.dsn, "db-dsn", "user:pass@localhost:5432/db", "postgreSQL DSN")
@@ -88,12 +86,18 @@ func run(logger *slog.Logger) error {
 		return err
 	}
 
-	app := &application{
-		config: cfg,
-		store:  store,
-		logger: logger,
-		mailer: mailer,
+	us := &uaiServer{
+		config:  cfg,
+		querier: store,
+		logger:  logger,
+		mailer:  mailer,
 	}
 
-	return app.serveHTTP()
+	us.logger.Debug(
+		"config",
+		"port", cfg.port,
+		"env", cfg.env,
+	)
+
+	return us.serve()
 }

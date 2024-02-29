@@ -9,7 +9,7 @@ services:
     ports:
       - ${DATABASE_PORT}:5432
     env_file:
-      - .${APP_ENV}.env
+      - .${ENV}.env
     volumes:
       - database_data:/var/lib/postgresql/data
     environment:
@@ -23,9 +23,9 @@ services:
       context: .
       dockerfile: ./dev.dockerfile
     ports:
-      - 4000:4000
+      - 8080:8080
     env_file:
-      - .${APP_ENV}.env
+      - .${ENV}.env
     depends_on:
       - database
     environment:

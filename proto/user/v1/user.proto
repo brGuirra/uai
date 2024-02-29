@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package user.v1;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/brGuirra/uai";
+
+enum Role {
+  ROLE_STAFF = 0;
+  ROLE_LEADER = 1;
+  ROLE_EMPLOYEE = 2;
+}
+
+message AddUserRequest {
+  string name = 1;
+  string email = 2;
+  repeated Role roles = 3;
+}
+
+service UserService {
+  rpc AddUser(AddUserRequest) returns (google.protobuf.Empty) {}
+}
