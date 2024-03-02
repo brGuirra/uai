@@ -7,13 +7,15 @@ package database
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
-const createUser = `-- name: CreateUser :exec
+const createUser = `-- name: CreateUser :one
 INSERT INTO
 "users" ("name", "email")
-VALUES
-($1, $2)
+VALUES ($1, $2)
+RETURNING "id"
 `
 
 type CreateUserParams struct {
@@ -21,7 +23,9 @@ type CreateUserParams struct {
 	Email string `json:"email"`
 }
 
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
-	_, err := q.db.Exec(ctx, createUser, arg.Name, arg.Email)
-	return err
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, createUser, arg.Name, arg.Email)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
 }

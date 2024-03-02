@@ -9,6 +9,7 @@ import (
 
 	"github.com/brGuirra/uai/internal/config"
 	"github.com/brGuirra/uai/internal/smtp"
+	"github.com/brGuirra/uai/internal/token"
 
 	database "github.com/brGuirra/uai/internal/database/sqlc"
 )
@@ -45,13 +46,18 @@ func run(logger *slog.Logger, configFile string) error {
 		return err
 	}
 
-	as := NewAppServer(cfg, store, logger, mailer)
+	tokenMaker, err := token.NewPasetoMaker(cfg.Token.SimmetricKey)
+	if err != nil {
+		return err
+	}
 
-	as.logger.Info(
+	s := NewServer(cfg, tokenMaker, store, logger, mailer)
+
+	s.logger.Info(
 		"config",
 		"port", cfg.Port,
 		"env", cfg.Env,
 	)
 
-	return as.serve()
+	return s.serve()
 }

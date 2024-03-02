@@ -1,8 +1,8 @@
 # https://taskfile.dev
 
-version: "3"
+version: '3'
 
-dotenv: [".development.env"]
+dotenv: ['.development.env']
 
 tasks:
   # ==================================================================================== #
@@ -61,7 +61,7 @@ tasks:
       - migrate -path ./internal/database/migrations -database="postgres://${DATABASE_DSN}" -verbose drop -f
     silent: true
 
-  db:generate:
+  db:gen:
     desc: Generate Go code to interact with database using sqlc
     summary: |
       Generate Go code to interact with database using sqlc.
@@ -126,9 +126,26 @@ tasks:
       - docker compose --env-file ./.${ENV}.env stop database api
     silent: true
 
-  pkl:
+  config:eval:
+    desc: Evaluate config file
+    summary: |
+      Evaluate config file
+
+      It will evaluate the config file and print
+      the result in JSON format.
     cmds:
       - pkl eval -f json ./pkl/DevelopmentConfig.pkl
+    silent: true
+
+  config:gen:
+    desc: Generate config package based on config file template
+    summary: |
+      Generate config package based on config file template
+
+      It will generate the config package with pkl-gen-go based on
+      the config file template.
+    cmds:
+      - pkl-gen-go pkl/Config.pkl --base-path github.com/brGuirra/uai
     silent: true
 
   # ==================================================================================== #
@@ -136,7 +153,7 @@ tasks:
   # ==================================================================================== #
 
   vendor:
-    desc: "Tidy and vendor dependencies"
+    desc: 'Tidy and vendor dependencies'
     cmds:
       - echo "Tidying and verifying module dependencies..."
       - go mod tidy
@@ -146,8 +163,8 @@ tasks:
     silent: true
 
   test:integration:
-    desc: "Run integration tests"
-    dotenv: [".test.env"]
+    desc: 'Run integration tests'
+    dotenv: ['.test.env']
     cmds:
       - docker compose --env-file ./.${ENV}.env up -d database_test
       - gotestsum --format testname ./... -tags=integration -db-dsn="${DATABASE_DSN}" {{.CLI_ARGS}}
@@ -155,7 +172,7 @@ tasks:
     silent: true
 
   audit:
-    desc: "Tidy dependencies and format, vet and test all code"
+    desc: 'Tidy dependencies and format, vet and test all code'
     summary: |
       Tidy dependencies and format, vet and test all code
 

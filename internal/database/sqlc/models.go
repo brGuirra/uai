@@ -202,6 +202,20 @@ type Credential struct {
 	CreatedAt      pgtype.Timestamp `json:"created_at"`
 }
 
+type Permission struct {
+	ID          uuid.UUID        `json:"id"`
+	Code        string           `json:"code"`
+	Description string           `json:"description"`
+	CreatedAt   pgtype.Timestamp `json:"created_at"`
+}
+
+type PermissionsRole struct {
+	RoleID       uuid.UUID        `json:"role_id"`
+	PermissionID uuid.UUID        `json:"permission_id"`
+	DeletedAt    pgtype.Timestamp `json:"deleted_at"`
+	CreatedAt    pgtype.Timestamp `json:"created_at"`
+}
+
 type Profile struct {
 	ID        uuid.UUID        `json:"id"`
 	UserID    uuid.UUID        `json:"user_id"`
@@ -214,9 +228,9 @@ type Profile struct {
 }
 
 type Role struct {
-	ID          uuid.UUID        `json:"id"`
-	DisplayName string           `json:"display_name"`
-	CreatedAt   pgtype.Timestamp `json:"created_at"`
+	ID        uuid.UUID        `json:"id"`
+	Code      string           `json:"code"`
+	CreatedAt pgtype.Timestamp `json:"created_at"`
 }
 
 type Ticket struct {

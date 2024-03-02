@@ -16,8 +16,8 @@ cors {
   }
 }
 
-jwt {
-  secretKey = read("env:JWT_SECRET_KEY")
+token {
+  simmetricKey = read("env:TOKEN_SIMMETRIC_KEY")
 }
 
 smtp {

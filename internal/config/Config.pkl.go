@@ -19,7 +19,7 @@ type Config struct {
 
 	Cors *Cors `pkl:"cors"`
 
-	Jwt *JWT `pkl:"jwt"`
+	Token *Token `pkl:"token"`
 
 	Smtp *SMTP `pkl:"smtp"`
 

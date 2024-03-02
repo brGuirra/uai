@@ -18,34 +18,37 @@ import (
 	database "github.com/brGuirra/uai/internal/database/sqlc"
 	"github.com/brGuirra/uai/internal/gen/user/v1/userv1connect"
 	"github.com/brGuirra/uai/internal/smtp"
+	"github.com/brGuirra/uai/internal/token"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 )
 
-type appServer struct {
-	config *config.Config
-	store  database.Querier
-	logger *slog.Logger
-	mailer *smtp.Mailer
-	wg     sync.WaitGroup
+type server struct {
 	userv1connect.UnimplementedUserServiceHandler
+	tokenMaker token.Maker
+	store      database.Querier
+	config     *config.Config
+	logger     *slog.Logger
+	mailer     *smtp.Mailer
+	wg         sync.WaitGroup
 }
 
-func NewAppServer(config *config.Config, store database.Querier, logger *slog.Logger, mailer *smtp.Mailer) appServer {
-	return appServer{
-		config: config,
-		store:  store,
-		logger: logger,
-		mailer: mailer,
+func NewServer(config *config.Config, tokenMaker token.Maker, store database.Querier, logger *slog.Logger, mailer *smtp.Mailer) server {
+	return server{
+		config:     config,
+		tokenMaker: tokenMaker,
+		store:      store,
+		logger:     logger,
+		mailer:     mailer,
 	}
 }
 
-func (as *appServer) serve() error {
+func (s *server) serve() error {
 	mux := http.NewServeMux()
 
 	compress1KB := connect.WithCompressMinBytes(1024)
 
-	mux.Handle(userv1connect.NewUserServiceHandler(as, compress1KB))
+	mux.Handle(userv1connect.NewUserServiceHandler(s, compress1KB))
 
 	mux.Handle(grpcreflect.NewHandlerV1(
 		grpcreflect.NewStaticReflector(userv1connect.UserServiceName),
@@ -58,7 +61,7 @@ func (as *appServer) serve() error {
 	))
 
 	srv := &http.Server{
-		Addr:              fmt.Sprintf("0.0.0.0:%d", as.config.Port),
+		Addr:              fmt.Sprintf("0.0.0.0:%d", s.config.Port),
 		Handler:           h2c.NewHandler(mux, &http2.Server{}),
 		ReadHeaderTimeout: time.Second,
 		ReadTimeout:       5 * time.Minute,
@@ -71,11 +74,11 @@ func (as *appServer) serve() error {
 	go func() {
 		quit := make(chan os.Signal, 1)
 		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-		s := <-quit
+		sig := <-quit
 
-		as.logger.Info(
+		s.logger.Info(
 			"shutting down server",
-			"signal", s.String(),
+			"signal", sig.String(),
 		)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -86,12 +89,12 @@ func (as *appServer) serve() error {
 			shutdownError <- err
 		}
 
-		as.logger.Info(
+		s.logger.Info(
 			"completing background tasks",
 			"addr", srv.Addr,
 		)
 
-		as.wg.Wait()
+		s.wg.Wait()
 		shutdownError <- nil
 	}()
 
@@ -105,7 +108,7 @@ func (as *appServer) serve() error {
 		return err
 	}
 
-	as.logger.Info(
+	s.logger.Info(
 		"stopped server",
 		"addr", srv.Addr,
 	)

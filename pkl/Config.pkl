@@ -11,8 +11,8 @@ class DB {
   dsn: String
 }
 
-class JWT {
-  secretKey: String
+class Token {
+  simmetricKey: String
 }
 
 class SMTP {
@@ -43,7 +43,7 @@ db: DB
 
 cors: Cors
 
-jwt: JWT
+token: Token
 
 smtp: SMTP
 
