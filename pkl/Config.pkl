@@ -1,0 +1,50 @@
+@go.Package { name = "github.com/brGuirra/uai/internal/config"}
+module uai.Config
+
+import "package://pkg.pkl-lang.org/pkl-go/pkl.golang@0.5.3#/go.pkl"
+
+class Cors {
+  trustedOrigins: Listing<String>
+}
+
+class DB {
+  dsn: String
+}
+
+class JWT {
+  secretKey: String
+}
+
+class SMTP {
+  host: String
+  port: UInt16
+  username: String
+  password: String
+  from: EmailAddress
+}
+
+class User {
+  name: String
+  email: EmailAddress
+  password: String
+}
+
+typealias Environment = "development"|"production"|"test"
+
+typealias EmailAddress = String(contains("@"))
+
+host: String
+
+port: UInt16
+
+env: Environment 
+
+db: DB
+
+cors: Cors
+
+jwt: JWT
+
+smtp: SMTP
+
+defaultUser: User

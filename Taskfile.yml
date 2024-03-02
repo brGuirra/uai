@@ -99,7 +99,8 @@ tasks:
       used alongside docker to build the development
       environment in Dockerfile.
     cmds:
-      - CompileDaemon -build="go build -o ./tmp/server ./cmd/server" -command="./tmp/server -db-dsn=${DATABASE_DSN} -smtp-host=${SMPT_HOST} -smtp-port=${SMPT_PORT} -smtp-username=${SMTP_USERNAME} -smtp-password=${SMTP_PASSWORD} -smtp-from=${SMTP_SENDER} -cors-trusted-origins=${CORS_TRUSTED_ORIGINS}"
+      - air
+
     silent: true
 
   up:
@@ -123,6 +124,11 @@ tasks:
       docker compose.
     cmds:
       - docker compose --env-file ./.${ENV}.env stop database api
+    silent: true
+
+  pkl:
+    cmds:
+      - pkl eval -f json ./pkl/DevelopmentConfig.pkl
     silent: true
 
   # ==================================================================================== #

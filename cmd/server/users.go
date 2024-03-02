@@ -9,13 +9,13 @@ import (
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
-func (us *uaiServer) AddUser(ctx context.Context, req *connect.Request[userv1.AddUserRequest]) (*connect.Response[emptypb.Empty], error) {
+func (as *appServer) AddUser(ctx context.Context, req *connect.Request[userv1.AddUserRequest]) (*connect.Response[emptypb.Empty], error) {
 	args := database.CreateUserParams{
 		Name:  req.Msg.Name,
 		Email: req.Msg.Email,
 	}
 
-	err := us.querier.CreateUser(ctx, args)
+	err := as.store.CreateUser(ctx, args)
 	if err != nil {
 		return nil, err
 	}

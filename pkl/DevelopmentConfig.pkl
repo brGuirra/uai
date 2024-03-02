@@ -1,0 +1,41 @@
+amends "Config.pkl"
+
+host = "0.0.0.0"
+
+port = 8080
+
+env = read("env:ENV")
+
+db {
+  dsn = read("env:DATABASE_DSN")
+}
+
+cors {
+  trustedOrigins {
+    ...read("env:CORS_TRUSTED_ORIGINS").split(" ")
+  }
+}
+
+jwt {
+  secretKey = read("env:JWT_SECRET_KEY")
+}
+
+smtp {
+  host = read("env:SMTP_HOST")
+
+  port = read("env:SMTP_PORT").toInt()
+
+  username = read("env:SMTP_USERNAME")
+
+  password = read("env:SMTP_PASSWORD")
+
+  from = read("env:SMTP_FROM")
+}
+
+defaultUser {
+  name = read("env:DEFAULT_USER_NAME")
+
+  email = read("env:DEFAULT_USER_EMAIL")
+
+  password = read("env:DEFAULT_USER_PASSWORD")
+}

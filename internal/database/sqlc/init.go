@@ -1,19 +1,7 @@
-package init
+package database
 
-type config struct {
-	db struct {
-		dsn string
-	}
-	rootUser struct {
-		name     string
-		email    string
-		password string
-	}
-	roles []string
-}
-
-// run creates the default admin user if it doesn't exist.
-func run() error {
+// createDefaultAdmin creates the default admin user if it doesn't exist.
+func createDefaultAdmin() error {
 	// 	var cfg config
 	//
 	// 	flag.StringVar(&cfg.db.dsn, "db-dsn", "user:pass@localhost:5432/db", "postgreSQL DSN")
