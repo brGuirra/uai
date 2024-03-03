@@ -1,8 +1,8 @@
 # https://taskfile.dev
 
-version: '3'
+version: "3"
 
-dotenv: ['.development.env']
+dotenv: [".development.env"]
 
 tasks:
   # ==================================================================================== #
@@ -148,12 +148,23 @@ tasks:
       - pkl-gen-go pkl/Config.pkl --base-path github.com/brGuirra/uai
     silent: true
 
+  proto:gen:
+    desc: Generate proto files
+    summary: |
+      Generate proto files
+
+      It will generate proto files based on
+      the proto files template with buf cli.
+    cmds:
+      - buf generate proto
+    silent: true
+
   # ==================================================================================== #
   # QUALITY CONTROL
   # ==================================================================================== #
 
   vendor:
-    desc: 'Tidy and vendor dependencies'
+    desc: "Tidy and vendor dependencies"
     cmds:
       - echo "Tidying and verifying module dependencies..."
       - go mod tidy
@@ -163,8 +174,8 @@ tasks:
     silent: true
 
   test:integration:
-    desc: 'Run integration tests'
-    dotenv: ['.test.env']
+    desc: "Run integration tests"
+    dotenv: [".test.env"]
     cmds:
       - docker compose --env-file ./.${ENV}.env up -d database_test
       - gotestsum --format testname ./... -tags=integration -db-dsn="${DATABASE_DSN}" {{.CLI_ARGS}}
@@ -172,7 +183,7 @@ tasks:
     silent: true
 
   audit:
-    desc: 'Tidy dependencies and format, vet and test all code'
+    desc: "Tidy dependencies and format, vet and test all code"
     summary: |
       Tidy dependencies and format, vet and test all code
 

@@ -36,17 +36,22 @@ const (
 const (
 	// UserServiceAddUserProcedure is the fully-qualified name of the UserService's AddUser RPC.
 	UserServiceAddUserProcedure = "/user.v1.UserService/AddUser"
+	// UserServiceActivateUserProcedure is the fully-qualified name of the UserService's ActivateUser
+	// RPC.
+	UserServiceActivateUserProcedure = "/user.v1.UserService/ActivateUser"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
 var (
-	userServiceServiceDescriptor       = v1.File_user_v1_user_proto.Services().ByName("UserService")
-	userServiceAddUserMethodDescriptor = userServiceServiceDescriptor.Methods().ByName("AddUser")
+	userServiceServiceDescriptor            = v1.File_user_v1_user_proto.Services().ByName("UserService")
+	userServiceAddUserMethodDescriptor      = userServiceServiceDescriptor.Methods().ByName("AddUser")
+	userServiceActivateUserMethodDescriptor = userServiceServiceDescriptor.Methods().ByName("ActivateUser")
 )
 
 // UserServiceClient is a client for the user.v1.UserService service.
 type UserServiceClient interface {
 	AddUser(context.Context, *connect.Request[v1.AddUserRequest]) (*connect.Response[emptypb.Empty], error)
+	ActivateUser(context.Context, *connect.Request[v1.ActivateUserRequest]) (*connect.Response[v1.ActivateUserResponse], error)
 }
 
 // NewUserServiceClient constructs a client for the user.v1.UserService service. By default, it uses
@@ -65,12 +70,19 @@ func NewUserServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(userServiceAddUserMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		activateUser: connect.NewClient[v1.ActivateUserRequest, v1.ActivateUserResponse](
+			httpClient,
+			baseURL+UserServiceActivateUserProcedure,
+			connect.WithSchema(userServiceActivateUserMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // userServiceClient implements UserServiceClient.
 type userServiceClient struct {
-	addUser *connect.Client[v1.AddUserRequest, emptypb.Empty]
+	addUser      *connect.Client[v1.AddUserRequest, emptypb.Empty]
+	activateUser *connect.Client[v1.ActivateUserRequest, v1.ActivateUserResponse]
 }
 
 // AddUser calls user.v1.UserService.AddUser.
@@ -78,9 +90,15 @@ func (c *userServiceClient) AddUser(ctx context.Context, req *connect.Request[v1
 	return c.addUser.CallUnary(ctx, req)
 }
 
+// ActivateUser calls user.v1.UserService.ActivateUser.
+func (c *userServiceClient) ActivateUser(ctx context.Context, req *connect.Request[v1.ActivateUserRequest]) (*connect.Response[v1.ActivateUserResponse], error) {
+	return c.activateUser.CallUnary(ctx, req)
+}
+
 // UserServiceHandler is an implementation of the user.v1.UserService service.
 type UserServiceHandler interface {
 	AddUser(context.Context, *connect.Request[v1.AddUserRequest]) (*connect.Response[emptypb.Empty], error)
+	ActivateUser(context.Context, *connect.Request[v1.ActivateUserRequest]) (*connect.Response[v1.ActivateUserResponse], error)
 }
 
 // NewUserServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -95,10 +113,18 @@ func NewUserServiceHandler(svc UserServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(userServiceAddUserMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	userServiceActivateUserHandler := connect.NewUnaryHandler(
+		UserServiceActivateUserProcedure,
+		svc.ActivateUser,
+		connect.WithSchema(userServiceActivateUserMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/user.v1.UserService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case UserServiceAddUserProcedure:
 			userServiceAddUserHandler.ServeHTTP(w, r)
+		case UserServiceActivateUserProcedure:
+			userServiceActivateUserHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -110,4 +136,8 @@ type UnimplementedUserServiceHandler struct{}
 
 func (UnimplementedUserServiceHandler) AddUser(context.Context, *connect.Request[v1.AddUserRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("user.v1.UserService.AddUser is not implemented"))
+}
+
+func (UnimplementedUserServiceHandler) ActivateUser(context.Context, *connect.Request[v1.ActivateUserRequest]) (*connect.Response[v1.ActivateUserResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("user.v1.UserService.ActivateUser is not implemented"))
 }

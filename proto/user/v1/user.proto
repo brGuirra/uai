@@ -18,6 +18,16 @@ message AddUserRequest {
   repeated Role roles = 3;
 }
 
+message ActivateUserRequest {
+  string activation_token = 1;
+  string password = 2;
+}
+
+message ActivateUserResponse {
+  string authentication_token = 1;
+}
+
 service UserService {
   rpc AddUser(AddUserRequest) returns (google.protobuf.Empty) {}
+  rpc ActivateUser(ActivateUserRequest) returns (ActivateUserResponse) {}
 }
