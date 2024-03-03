@@ -5,5 +5,9 @@ breaking:
 lint:
   use:
     - DEFAULT
+  rpc_allow_google_protobuf_empty_responses: true
   ignore:
     - google/protobuf/Empty.proto
+    - buf/validate/validate.proto
+deps:
+  - buf.build/bufbuild/protovalidate

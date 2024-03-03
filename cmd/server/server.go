@@ -14,6 +14,7 @@ import (
 
 	connect "connectrpc.com/connect"
 	"connectrpc.com/grpcreflect"
+	"connectrpc.com/validate"
 	"github.com/brGuirra/uai/internal/config"
 	database "github.com/brGuirra/uai/internal/database/sqlc"
 	"github.com/brGuirra/uai/internal/gen/user/v1/userv1connect"
@@ -44,11 +45,16 @@ func NewServer(config *config.Config, tokenMaker token.Maker, store database.Que
 }
 
 func (s *server) serve() error {
+	validateInterceptor, err := validate.NewInterceptor()
+	if err != nil {
+		return err
+	}
+
 	mux := http.NewServeMux()
 
 	compress1KB := connect.WithCompressMinBytes(1024)
 
-	mux.Handle(userv1connect.NewUserServiceHandler(s, compress1KB))
+	mux.Handle(userv1connect.NewUserServiceHandler(s, compress1KB, connect.WithInterceptors(validateInterceptor)))
 
 	mux.Handle(grpcreflect.NewHandlerV1(
 		grpcreflect.NewStaticReflector(userv1connect.UserServiceName),
@@ -98,7 +104,7 @@ func (s *server) serve() error {
 		shutdownError <- nil
 	}()
 
-	err := srv.ListenAndServe()
+	err = srv.ListenAndServe()
 	if !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}

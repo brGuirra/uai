@@ -8,6 +8,8 @@ import (
 	database "github.com/brGuirra/uai/internal/database/sqlc"
 	userv1 "github.com/brGuirra/uai/internal/gen/user/v1"
 	"github.com/brGuirra/uai/internal/token"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -19,8 +21,17 @@ func (s *server) AddUser(ctx context.Context, req *connect.Request[userv1.AddUse
 
 	userID, err := s.store.CreateUser(ctx, args)
 	if err != nil {
-		s.logger.Error("error creating user", "cause", err)
-		return nil, connect.NewError(connect.CodeInternal, errors.New("internal server error"))
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			switch pgErr.Code {
+			case pgerrcode.UniqueViolation:
+				return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("email already in use"))
+			default:
+				s.logger.Error("error creating user", "cause", err)
+				return nil, connect.NewError(connect.CodeInternal, errors.New("internal server error"))
+			}
+		}
+
 	}
 
 	token := s.tokenMaker.CreateToken(userID.String(), token.ScopeActivation)

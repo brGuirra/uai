@@ -2,25 +2,37 @@ syntax = "proto3";
 
 package user.v1;
 
+import "buf/validate/validate.proto";
 import "google/protobuf/empty.proto";
 
 option go_package = "github.com/brGuirra/uai";
 
 enum Role {
-  ROLE_STAFF = 0;
-  ROLE_LEADER = 1;
-  ROLE_EMPLOYEE = 2;
+  ROLE_UNSPECIFIED = 0;
+  ROLE_EMPLOYEE = 1;
+  ROLE_LEADER = 2;
+  ROLE_STAFF = 3;
 }
 
 message AddUserRequest {
-  string name = 1;
-  string email = 2;
-  repeated Role roles = 3;
+  option (buf.validate.message).cel = {
+    id: "roles_specified",
+    message: "elemests of roles list must be non-zero",
+    expression: "this.roles.all(role, role != 0)"
+  };
+
+  string name = 1 [(buf.validate.field).string.min_len = 1];
+  string email = 2 [(buf.validate.field).cel = {
+    id: "valid_email",
+    message: "email must be a valid email",
+    expression: "this.isEmail()"
+  }];
+  repeated Role roles = 3 [(buf.validate.field).repeated.unique = true];
 }
 
 message ActivateUserRequest {
-  string activation_token = 1;
-  string password = 2;
+  string activation_token = 1 [(buf.validate.field).string.min_len = 1];
+  string password = 2 [(buf.validate.field).string.min_len = 8];
 }
 
 message ActivateUserResponse {
