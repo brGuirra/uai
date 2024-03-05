@@ -21,22 +21,25 @@ message AddUserRequest {
     expression: "this.roles.all(role, role != 0)"
   };
 
-  string name = 1 [(buf.validate.field).string.min_len = 1];
+  string name = 1 [(buf.validate.field).required = true];
   string email = 2 [(buf.validate.field).cel = {
     id: "valid_email",
     message: "email must be a valid email",
     expression: "this.isEmail()"
   }];
-  repeated Role roles = 3 [(buf.validate.field).repeated.unique = true];
+  repeated Role roles = 3 [
+    (buf.validate.field).repeated.unique = true,
+    (buf.validate.field).required = true
+  ];
 }
 
 message ActivateUserRequest {
-  string activation_token = 1 [(buf.validate.field).string.min_len = 1];
+  string activation_token = 1 [(buf.validate.field).required = true];
   string password = 2 [(buf.validate.field).string.min_len = 8];
 }
 
 message ActivateUserResponse {
-  string authentication_token = 1;
+  string authentication_token = 1 [(buf.validate.field).required = true];
 }
 
 service UserService {
