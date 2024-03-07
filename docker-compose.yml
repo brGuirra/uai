@@ -17,6 +17,22 @@ services:
       - POSTGRES_USER=${DATABASE_USERNAME}
       - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
 
+  database_test:
+    image: postgres:16-alpine
+    container_name: ${DATABASE_CONTAINER}
+    restart: always
+    tty: true
+    ports:
+      - ${DATABASE_PORT}:5432
+    env_file:
+      - .${ENV}.env
+    volumes:
+      - database_data_test:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${DATABASE_NAME}
+      - POSTGRES_USER=${DATABASE_USERNAME}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
+
   api:
     container_name: uai_api
     build:
@@ -35,3 +51,4 @@ services:
 
 volumes:
   database_data:
+  database_data_test:
