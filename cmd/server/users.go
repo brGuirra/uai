@@ -23,14 +23,13 @@ func (s *server) AddUser(ctx context.Context, req *connect.Request[userv1.AddUse
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
-			switch pgErr.Code {
-			case pgerrcode.UniqueViolation:
+			if pgErr.Code == pgerrcode.UniqueViolation {
 				return nil, connect.NewError(connect.CodeAlreadyExists, errors.New("email already in use"))
-			default:
-				s.logger.Error("error creating user", "cause", err)
-				return nil, connect.NewError(connect.CodeInternal, errors.New("internal server error"))
 			}
 		}
+
+		s.logger.Error("error creating user", "cause", err)
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal server error"))
 
 	}
 

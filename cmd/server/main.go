@@ -41,7 +41,7 @@ func run(logger *slog.Logger, configFile string) error {
 		return err
 	}
 
-	mailer, err := smtp.NewMailer(cfg.Smtp.Host, int(cfg.Smtp.Port), cfg.Smtp.Username, cfg.Smtp.Password, cfg.Smtp.From)
+	mailer, err := smtp.NewMailtrapMailer(cfg.Smtp.Host, int(cfg.Smtp.Port), cfg.Smtp.Username, cfg.Smtp.Password, cfg.Smtp.From)
 	if err != nil {
 		return err
 	}

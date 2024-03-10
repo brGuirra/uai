@@ -1,0 +1,19 @@
+quiet: False
+disable-version-string: True
+with-expecter: True
+dir: "mocks/{{.PackageName}}"
+mockname: "{{.InterfaceName}}"
+filename: "{{.MockName}}.go"
+outpkg: mocks
+packages:
+  github.com/brGuirra/uai/internal/database/sqlc:
+    interfaces:
+      Store:
+
+  github.com/brGuirra/uai/internal/token:
+    interfaces:
+      Maker:
+
+  github.com/brGuirra/uai/internal/smtp:
+    interfaces:
+      Mailer:

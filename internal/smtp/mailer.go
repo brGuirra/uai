@@ -15,18 +15,22 @@ import (
 
 const defaultTimeout = 10 * time.Second
 
-type Mailer struct {
+type Mailer interface {
+	Send(recipient string, data any, patterns ...string) error
+}
+
+type MailtrapMailer struct {
 	client mail.Client
 	from   string
 }
 
-func NewMailer(host string, port int, username, password, from string) (*Mailer, error) {
+func NewMailtrapMailer(host string, port int, username, password, from string) (Mailer, error) {
 	client, err := mail.NewClient(host, mail.WithTimeout(defaultTimeout), mail.WithSMTPAuth(mail.SMTPAuthLogin), mail.WithPort(port), mail.WithUsername(username), mail.WithPassword(password))
 	if err != nil {
 		return nil, err
 	}
 
-	mailer := &Mailer{
+	mailer := &MailtrapMailer{
 		client: *client,
 		from:   from,
 	}
@@ -34,7 +38,7 @@ func NewMailer(host string, port int, username, password, from string) (*Mailer,
 	return mailer, nil
 }
 
-func (m *Mailer) Send(recipient string, data any, patterns ...string) error {
+func (m *MailtrapMailer) Send(recipient string, data any, patterns ...string) error {
 	for i := range patterns {
 		patterns[i] = "emails/" + patterns[i]
 	}
