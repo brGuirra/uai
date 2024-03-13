@@ -24,6 +24,63 @@ func (_m *Store) EXPECT() *Store_Expecter {
 	return &Store_Expecter{mock: &_m.Mock}
 }
 
+// AddRolesForUser provides a mock function with given fields: ctx, arg
+func (_m *Store) AddRolesForUser(ctx context.Context, arg []database.AddRolesForUserParams) (int64, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AddRolesForUser")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, []database.AddRolesForUserParams) (int64, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, []database.AddRolesForUserParams) int64); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, []database.AddRolesForUserParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Store_AddRolesForUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddRolesForUser'
+type Store_AddRolesForUser_Call struct {
+	*mock.Call
+}
+
+// AddRolesForUser is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg []database.AddRolesForUserParams
+func (_e *Store_Expecter) AddRolesForUser(ctx interface{}, arg interface{}) *Store_AddRolesForUser_Call {
+	return &Store_AddRolesForUser_Call{Call: _e.mock.On("AddRolesForUser", ctx, arg)}
+}
+
+func (_c *Store_AddRolesForUser_Call) Run(run func(ctx context.Context, arg []database.AddRolesForUserParams)) *Store_AddRolesForUser_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].([]database.AddRolesForUserParams))
+	})
+	return _c
+}
+
+func (_c *Store_AddRolesForUser_Call) Return(_a0 int64, _a1 error) *Store_AddRolesForUser_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Store_AddRolesForUser_Call) RunAndReturn(run func(context.Context, []database.AddRolesForUserParams) (int64, error)) *Store_AddRolesForUser_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateUser provides a mock function with given fields: ctx, arg
 func (_m *Store) CreateUser(ctx context.Context, arg database.CreateUserParams) (uuid.UUID, error) {
 	ret := _m.Called(ctx, arg)
@@ -84,7 +141,7 @@ func (_c *Store_CreateUser_Call) RunAndReturn(run func(context.Context, database
 }
 
 // ExecTx provides a mock function with given fields: ctx, fn
-func (_m *Store) ExecTx(ctx context.Context, fn func(*database.Queries) error) error {
+func (_m *Store) ExecTx(ctx context.Context, fn func(database.Querier) error) error {
 	ret := _m.Called(ctx, fn)
 
 	if len(ret) == 0 {
@@ -92,7 +149,7 @@ func (_m *Store) ExecTx(ctx context.Context, fn func(*database.Queries) error) e
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, func(*database.Queries) error) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, func(database.Querier) error) error); ok {
 		r0 = rf(ctx, fn)
 	} else {
 		r0 = ret.Error(0)
@@ -108,14 +165,14 @@ type Store_ExecTx_Call struct {
 
 // ExecTx is a helper method to define mock.On call
 //   - ctx context.Context
-//   - fn func(*database.Queries) error
+//   - fn func(database.Querier) error
 func (_e *Store_Expecter) ExecTx(ctx interface{}, fn interface{}) *Store_ExecTx_Call {
 	return &Store_ExecTx_Call{Call: _e.mock.On("ExecTx", ctx, fn)}
 }
 
-func (_c *Store_ExecTx_Call) Run(run func(ctx context.Context, fn func(*database.Queries) error)) *Store_ExecTx_Call {
+func (_c *Store_ExecTx_Call) Run(run func(ctx context.Context, fn func(database.Querier) error)) *Store_ExecTx_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(func(*database.Queries) error))
+		run(args[0].(context.Context), args[1].(func(database.Querier) error))
 	})
 	return _c
 }
@@ -125,7 +182,66 @@ func (_c *Store_ExecTx_Call) Return(_a0 error) *Store_ExecTx_Call {
 	return _c
 }
 
-func (_c *Store_ExecTx_Call) RunAndReturn(run func(context.Context, func(*database.Queries) error) error) *Store_ExecTx_Call {
+func (_c *Store_ExecTx_Call) RunAndReturn(run func(context.Context, func(database.Querier) error) error) *Store_ExecTx_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetRolesByCodes provides a mock function with given fields: ctx, codes
+func (_m *Store) GetRolesByCodes(ctx context.Context, codes []string) ([]uuid.UUID, error) {
+	ret := _m.Called(ctx, codes)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetRolesByCodes")
+	}
+
+	var r0 []uuid.UUID
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, []string) ([]uuid.UUID, error)); ok {
+		return rf(ctx, codes)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, []string) []uuid.UUID); ok {
+		r0 = rf(ctx, codes)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]uuid.UUID)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, []string) error); ok {
+		r1 = rf(ctx, codes)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Store_GetRolesByCodes_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetRolesByCodes'
+type Store_GetRolesByCodes_Call struct {
+	*mock.Call
+}
+
+// GetRolesByCodes is a helper method to define mock.On call
+//   - ctx context.Context
+//   - codes []string
+func (_e *Store_Expecter) GetRolesByCodes(ctx interface{}, codes interface{}) *Store_GetRolesByCodes_Call {
+	return &Store_GetRolesByCodes_Call{Call: _e.mock.On("GetRolesByCodes", ctx, codes)}
+}
+
+func (_c *Store_GetRolesByCodes_Call) Run(run func(ctx context.Context, codes []string)) *Store_GetRolesByCodes_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].([]string))
+	})
+	return _c
+}
+
+func (_c *Store_GetRolesByCodes_Call) Return(_a0 []uuid.UUID, _a1 error) *Store_GetRolesByCodes_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Store_GetRolesByCodes_Call) RunAndReturn(run func(context.Context, []string) ([]uuid.UUID, error)) *Store_GetRolesByCodes_Call {
 	_c.Call.Return(run)
 	return _c
 }

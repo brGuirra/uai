@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 package main
 
 import (
@@ -49,14 +52,9 @@ func setupClients(srv *httptest.Server) []userv1connect.UserServiceClient {
 }
 
 func TestAddUser(t *testing.T) {
-	newUser := database.User{
-		Name:  gofakeit.Name(),
-		Email: gofakeit.Email(),
-	}
-
 	testCases := []struct {
 		req           *userv1.AddUserRequest
-		buildStubs    func(storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer)
+		buildStubs    func(req *userv1.AddUserRequest, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer)
 		checkResponse func(t *testing.T, res *connect.Response[emptypb.Empty], err error)
 		checkMocks    func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer)
 		name          string
@@ -64,16 +62,31 @@ func TestAddUser(t *testing.T) {
 		{
 			name: "Success",
 			req: &userv1.AddUserRequest{
-				Name:  newUser.Name,
-				Email: newUser.Email,
+				Name:  gofakeit.Name(),
+				Email: gofakeit.Email(),
 				Roles: []userv1.Role{userv1.Role_ROLE_EMPLOYEE},
 			},
-			buildStubs: func(storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
+			buildStubs: func(req *userv1.AddUserRequest, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
 				fakeUserID := uuid.MustParse(gofakeit.UUID())
 				storeMock.EXPECT().CreateUser(
 					mock.Anything,
-					database.CreateUserParams{Name: newUser.Name, Email: newUser.Email}).
+					database.CreateUserParams{Name: req.Name, Email: req.Email}).
 					Return(fakeUserID, nil).Once()
+
+				fakeRoleIDS := []uuid.UUID{uuid.MustParse(gofakeit.UUID())}
+				storeMock.EXPECT().GetRolesByCodes(mock.Anything, []string{"employee"}).Return(fakeRoleIDS, nil).Once()
+
+				storeMock.EXPECT().AddRolesForUser(mock.Anything, []database.AddRolesForUserParams{
+					{
+						UserID:  fakeUserID,
+						Grantor: fakeUserID,
+						RoleID:  fakeRoleIDS[0],
+					},
+				}).Return(1, nil).Once()
+
+				storeMock.EXPECT().ExecTx(mock.Anything, mock.Anything).RunAndReturn(func(_ context.Context, fn func(database.Querier) error) error {
+					return fn(storeMock)
+				}).Once()
 
 				fakeToken := gofakeit.Word()
 				makerMock.EXPECT().CreateToken(fakeUserID.String(), token.ScopeActivation).Return(fakeToken).Once()
@@ -82,14 +95,17 @@ func TestAddUser(t *testing.T) {
 					"activationToken": fakeToken,
 					"userID":          fakeUserID,
 				}
-				mailerMock.EXPECT().Send(newUser.Email, data, "welcome.tmpl").Return(nil).Once()
+				mailerMock.EXPECT().Send(req.Email, data, "welcome.tmpl").Return(nil).Once()
 			},
 			checkResponse: func(t *testing.T, res *connect.Response[emptypb.Empty], err error) {
 				assert.NoError(t, err)
 				assert.IsType(t, &emptypb.Empty{}, res.Msg)
 			},
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
+				storeMock.AssertNumberOfCalls(t, "ExecTx", 1)
 				storeMock.AssertNumberOfCalls(t, "CreateUser", 1)
+				storeMock.AssertNumberOfCalls(t, "GetRolesByCodes", 1)
+				storeMock.AssertNumberOfCalls(t, "AddRolesForUser", 1)
 				makerMock.AssertNumberOfCalls(t, "CreateToken", 1)
 				mailerMock.AssertNumberOfCalls(t, "Send", 1)
 			},
@@ -97,25 +113,19 @@ func TestAddUser(t *testing.T) {
 		{
 			name: "Duplicate Email",
 			req: &userv1.AddUserRequest{
-				Name:  newUser.Name,
-				Email: newUser.Email,
+				Name:  gofakeit.Name(),
+				Email: gofakeit.Email(),
 				Roles: []userv1.Role{userv1.Role_ROLE_EMPLOYEE},
 			},
-			buildStubs: func(storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
-				fakeUserID := uuid.MustParse(gofakeit.UUID())
+			buildStubs: func(req *userv1.AddUserRequest, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
 				storeMock.EXPECT().CreateUser(
 					mock.Anything,
-					database.CreateUserParams{Name: newUser.Name, Email: newUser.Email}).
+					database.CreateUserParams{Name: req.Name, Email: req.Email}).
 					Return(uuid.Nil, &pgconn.PgError{Code: pgerrcode.UniqueViolation}).Once()
 
-				fakeToken := gofakeit.Word()
-				makerMock.EXPECT().CreateToken(fakeUserID.String(), token.ScopeActivation).Return(fakeToken).Once()
-
-				data := map[string]any{
-					"activationToken": fakeToken,
-					"userID":          fakeUserID,
-				}
-				mailerMock.EXPECT().Send(newUser.Email, data, "welcome.tmpl").Return(nil).Once()
+				storeMock.EXPECT().ExecTx(mock.Anything, mock.Anything).RunAndReturn(func(_ context.Context, fn func(database.Querier) error) error {
+					return fn(storeMock)
+				}).Once()
 			},
 			checkResponse: func(t *testing.T, res *connect.Response[emptypb.Empty], err error) {
 				assert.Nil(t, res)
@@ -126,7 +136,10 @@ func TestAddUser(t *testing.T) {
 				assert.Equal(t, connectErr.Message(), "email already in use")
 			},
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
+				storeMock.AssertNumberOfCalls(t, "ExecTx", 1)
 				storeMock.AssertNumberOfCalls(t, "CreateUser", 1)
+				storeMock.AssertNotCalled(t, "GetRolesByCodes")
+				storeMock.AssertNotCalled(t, "AddRolesForUser")
 				makerMock.AssertNotCalled(t, "CreateToken")
 				mailerMock.AssertNotCalled(t, "Send")
 			},
@@ -134,15 +147,19 @@ func TestAddUser(t *testing.T) {
 		{
 			name: "Unexpected error from Store",
 			req: &userv1.AddUserRequest{
-				Name:  newUser.Name,
-				Email: newUser.Email,
+				Name:  gofakeit.Name(),
+				Email: gofakeit.Email(),
 				Roles: []userv1.Role{userv1.Role_ROLE_EMPLOYEE},
 			},
-			buildStubs: func(storeMock *dbMock.Store, _ *tokenMock.Maker, _ *smptMock.Mailer) {
+			buildStubs: func(req *userv1.AddUserRequest, storeMock *dbMock.Store, _ *tokenMock.Maker, _ *smptMock.Mailer) {
 				storeMock.EXPECT().CreateUser(
 					mock.Anything,
-					database.CreateUserParams{Name: newUser.Name, Email: newUser.Email}).
+					database.CreateUserParams{Name: req.Name, Email: req.Email}).
 					Return(uuid.Nil, gofakeit.Error()).Once()
+
+				storeMock.EXPECT().ExecTx(mock.Anything, mock.Anything).RunAndReturn(func(_ context.Context, fn func(database.Querier) error) error {
+					return fn(storeMock)
+				}).Once()
 			},
 			checkResponse: func(t *testing.T, res *connect.Response[emptypb.Empty], err error) {
 				assert.Nil(t, res)
@@ -153,7 +170,10 @@ func TestAddUser(t *testing.T) {
 				assert.Equal(t, connectErr.Message(), "internal server error")
 			},
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
+				storeMock.AssertNumberOfCalls(t, "ExecTx", 1)
 				storeMock.AssertNumberOfCalls(t, "CreateUser", 1)
+				storeMock.AssertNotCalled(t, "GetRolesByCodes")
+				storeMock.AssertNotCalled(t, "AddRolesForUser")
 				makerMock.AssertNotCalled(t, "CreateToken")
 				mailerMock.AssertNotCalled(t, "Send")
 			},
@@ -165,7 +185,7 @@ func TestAddUser(t *testing.T) {
 				Email: gofakeit.Email(),
 				Roles: []userv1.Role{userv1.Role_ROLE_EMPLOYEE},
 			},
-			buildStubs: func(storeMock *dbMock.Store, _ *tokenMock.Maker, _ *smptMock.Mailer) {},
+			buildStubs: func(_ *userv1.AddUserRequest, storeMock *dbMock.Store, _ *tokenMock.Maker, _ *smptMock.Mailer) {},
 			checkResponse: func(t *testing.T, res *connect.Response[emptypb.Empty], err error) {
 				assert.Nil(t, res)
 
@@ -185,7 +205,10 @@ func TestAddUser(t *testing.T) {
 				assert.Equal(t, "name", violations.Violations[0].FieldPath)
 			},
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
+				storeMock.AssertNotCalled(t, "ExecTx")
 				storeMock.AssertNotCalled(t, "CreateUser")
+				storeMock.AssertNotCalled(t, "GetRolesByCodes")
+				storeMock.AssertNotCalled(t, "AddRolesForUser")
 				makerMock.AssertNotCalled(t, "CreateToken")
 				mailerMock.AssertNotCalled(t, "Send")
 			},
@@ -197,7 +220,7 @@ func TestAddUser(t *testing.T) {
 				Email: gofakeit.Word(),
 				Roles: []userv1.Role{userv1.Role_ROLE_EMPLOYEE},
 			},
-			buildStubs: func(storeMock *dbMock.Store, _ *tokenMock.Maker, _ *smptMock.Mailer) {},
+			buildStubs: func(_ *userv1.AddUserRequest, storeMock *dbMock.Store, _ *tokenMock.Maker, _ *smptMock.Mailer) {},
 			checkResponse: func(t *testing.T, res *connect.Response[emptypb.Empty], err error) {
 				assert.Nil(t, res)
 
@@ -219,7 +242,10 @@ func TestAddUser(t *testing.T) {
 				assert.Equal(t, "email must be a valid email", violations.Violations[0].Message)
 			},
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
+				storeMock.AssertNotCalled(t, "ExecTx")
 				storeMock.AssertNotCalled(t, "CreateUser")
+				storeMock.AssertNotCalled(t, "GetRolesByCodes")
+				storeMock.AssertNotCalled(t, "AddRolesForUser")
 				makerMock.AssertNotCalled(t, "CreateToken")
 				mailerMock.AssertNotCalled(t, "Send")
 			},
@@ -231,7 +257,7 @@ func TestAddUser(t *testing.T) {
 				Email: gofakeit.Email(),
 				Roles: []userv1.Role{},
 			},
-			buildStubs: func(storeMock *dbMock.Store, _ *tokenMock.Maker, _ *smptMock.Mailer) {},
+			buildStubs: func(_ *userv1.AddUserRequest, storeMock *dbMock.Store, _ *tokenMock.Maker, _ *smptMock.Mailer) {},
 			checkResponse: func(t *testing.T, res *connect.Response[emptypb.Empty], err error) {
 				assert.Nil(t, res)
 
@@ -251,7 +277,10 @@ func TestAddUser(t *testing.T) {
 				assert.Equal(t, "roles", violations.Violations[0].FieldPath)
 			},
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
+				storeMock.AssertNotCalled(t, "ExecTx")
 				storeMock.AssertNotCalled(t, "CreateUser")
+				storeMock.AssertNotCalled(t, "GetRolesByCodes")
+				storeMock.AssertNotCalled(t, "AddRolesForUser")
 				makerMock.AssertNotCalled(t, "CreateToken")
 				mailerMock.AssertNotCalled(t, "Send")
 			},
@@ -263,7 +292,7 @@ func TestAddUser(t *testing.T) {
 				Email: gofakeit.Email(),
 				Roles: []userv1.Role{userv1.Role_ROLE_UNSPECIFIED, userv1.Role_ROLE_STAFF},
 			},
-			buildStubs: func(storeMock *dbMock.Store, _ *tokenMock.Maker, _ *smptMock.Mailer) {},
+			buildStubs: func(_ *userv1.AddUserRequest, storeMock *dbMock.Store, _ *tokenMock.Maker, _ *smptMock.Mailer) {},
 			checkResponse: func(t *testing.T, res *connect.Response[emptypb.Empty], err error) {
 				assert.Nil(t, res)
 
@@ -284,7 +313,10 @@ func TestAddUser(t *testing.T) {
 				assert.Equal(t, "elemests of roles list must be non-zero", violations.Violations[0].Message)
 			},
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
+				storeMock.AssertNotCalled(t, "ExecTx")
 				storeMock.AssertNotCalled(t, "CreateUser")
+				storeMock.AssertNotCalled(t, "GetRolesByCodes")
+				storeMock.AssertNotCalled(t, "AddRolesForUser")
 				makerMock.AssertNotCalled(t, "CreateToken")
 				mailerMock.AssertNotCalled(t, "Send")
 			},
@@ -296,7 +328,7 @@ func TestAddUser(t *testing.T) {
 				Email: gofakeit.Email(),
 				Roles: []userv1.Role{userv1.Role_ROLE_STAFF, userv1.Role_ROLE_STAFF},
 			},
-			buildStubs: func(storeMock *dbMock.Store, _ *tokenMock.Maker, _ *smptMock.Mailer) {},
+			buildStubs: func(_ *userv1.AddUserRequest, storeMock *dbMock.Store, _ *tokenMock.Maker, _ *smptMock.Mailer) {},
 			checkResponse: func(t *testing.T, res *connect.Response[emptypb.Empty], err error) {
 				assert.Nil(t, res)
 
@@ -316,7 +348,10 @@ func TestAddUser(t *testing.T) {
 				assert.Equal(t, "roles", violations.Violations[0].FieldPath)
 			},
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
+				storeMock.AssertNotCalled(t, "ExecTx")
 				storeMock.AssertNotCalled(t, "CreateUser")
+				storeMock.AssertNotCalled(t, "GetRolesByCodes")
+				storeMock.AssertNotCalled(t, "AddRolesForUser")
 				makerMock.AssertNotCalled(t, "CreateToken")
 				mailerMock.AssertNotCalled(t, "Send")
 			},
@@ -328,7 +363,7 @@ func TestAddUser(t *testing.T) {
 				Email: gofakeit.Email(),
 				Roles: []userv1.Role{},
 			},
-			buildStubs: func(storeMock *dbMock.Store, _ *tokenMock.Maker, _ *smptMock.Mailer) {},
+			buildStubs: func(_ *userv1.AddUserRequest, storeMock *dbMock.Store, _ *tokenMock.Maker, _ *smptMock.Mailer) {},
 			checkResponse: func(t *testing.T, res *connect.Response[emptypb.Empty], err error) {
 				assert.Nil(t, res)
 
@@ -348,7 +383,10 @@ func TestAddUser(t *testing.T) {
 				assert.Equal(t, "roles", violations.Violations[0].FieldPath)
 			},
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
+				storeMock.AssertNotCalled(t, "ExecTx")
 				storeMock.AssertNotCalled(t, "CreateUser")
+				storeMock.AssertNotCalled(t, "GetRolesByCodes")
+				storeMock.AssertNotCalled(t, "AddRolesForUser")
 				makerMock.AssertNotCalled(t, "CreateToken")
 				mailerMock.AssertNotCalled(t, "Send")
 			},
@@ -380,7 +418,7 @@ func TestAddUser(t *testing.T) {
 			clients := setupClients(srv)
 
 			for _, client := range clients {
-				tc.buildStubs(storeMock, makerMock, mailerMock)
+				tc.buildStubs(tc.req, storeMock, makerMock, mailerMock)
 
 				res, err := client.AddUser(context.Background(), connect.NewRequest(tc.req))
 

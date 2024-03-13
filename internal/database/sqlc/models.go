@@ -98,48 +98,6 @@ func (ns NullTicketStatus) Value() (driver.Value, error) {
 	return string(ns.TicketStatus), nil
 }
 
-type TokenScope string
-
-const (
-	TokenScopeActivation     TokenScope = "activation"
-	TokenScopeAuthentication TokenScope = "authentication"
-)
-
-func (e *TokenScope) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = TokenScope(s)
-	case string:
-		*e = TokenScope(s)
-	default:
-		return fmt.Errorf("unsupported scan type for TokenScope: %T", src)
-	}
-	return nil
-}
-
-type NullTokenScope struct {
-	TokenScope TokenScope `json:"token_scope"`
-	Valid      bool       `json:"valid"` // Valid is true if TokenScope is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullTokenScope) Scan(value interface{}) error {
-	if value == nil {
-		ns.TokenScope, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.TokenScope.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullTokenScope) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.TokenScope), nil
-}
-
 type UserStatus string
 
 const (
@@ -219,7 +177,7 @@ type PermissionsRole struct {
 type Profile struct {
 	ID        uuid.UUID        `json:"id"`
 	UserID    uuid.UUID        `json:"user_id"`
-	Nickname  string           `json:"nickname"`
+	Nickname  pgtype.Text      `json:"nickname"`
 	Picture   pgtype.Text      `json:"picture"`
 	Bio       pgtype.Text      `json:"bio"`
 	Version   int32            `json:"version"`
@@ -242,14 +200,6 @@ type Ticket struct {
 	Reason    TicketReason     `json:"reason"`
 	UpdatedAt pgtype.Timestamp `json:"updated_at"`
 	CreatedAt pgtype.Timestamp `json:"created_at"`
-}
-
-type Token struct {
-	ID     uuid.UUID        `json:"id"`
-	Hash   []byte           `json:"hash"`
-	UserID uuid.UUID        `json:"user_id"`
-	Expiry pgtype.Timestamp `json:"expiry"`
-	Scope  NullTokenScope   `json:"scope"`
 }
 
 type User struct {

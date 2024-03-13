@@ -11,7 +11,7 @@ import (
 
 type Store interface {
 	Querier
-	ExecTx(ctx context.Context, fn func(*Queries) error) error
+	ExecTx(ctx context.Context, fn func(Querier) error) error
 }
 
 // SQLStore provides all functions to execute SQL queries and transactions
@@ -42,7 +42,7 @@ func NewStore(dsn string) (Store, error) {
 }
 
 // ExecTx executes a function within a database transaction
-func (store *SQLStore) ExecTx(ctx context.Context, fn func(*Queries) error) error {
+func (store *SQLStore) ExecTx(ctx context.Context, fn func(Querier) error) error {
 	tx, err := store.db.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return err
