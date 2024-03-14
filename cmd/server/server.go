@@ -1,11 +1,15 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	connect "connectrpc.com/connect"
@@ -71,34 +75,34 @@ func (s *server) serve() error {
 		MaxHeaderBytes:    8 * 1024, // 8KiB
 	}
 
-	// shutdownError := make(chan error)
-	//
-	// go func() {
-	// 	quit := make(chan os.Signal, 1)
-	// 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	// 	sig := <-quit
-	//
-	// 	s.logger.Info(
-	// 		"shutting down server",
-	// 		"signal", sig.String(),
-	// 	)
-	//
-	// 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	// 	defer cancel()
-	//
-	// 	err := srv.Shutdown(ctx)
-	// 	if err != nil {
-	// 		shutdownError <- err
-	// 	}
-	//
-	// 	s.logger.Info(
-	// 		"completing background tasks",
-	// 		"addr", srv.Addr,
-	// 	)
-	//
-	// 	s.wg.Wait()
-	// 	shutdownError <- nil
-	// }()
+	shutdownError := make(chan error)
+
+	go func() {
+		quit := make(chan os.Signal, 1)
+		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+		sig := <-quit
+
+		s.logger.Info(
+			"shutting down server",
+			"signal", sig.String(),
+		)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		err := srv.Shutdown(ctx)
+		if err != nil {
+			shutdownError <- err
+		}
+
+		s.logger.Info(
+			"completing background tasks",
+			"addr", srv.Addr,
+		)
+
+		s.wg.Wait()
+		shutdownError <- nil
+	}()
 
 	err = srv.ListenAndServe()
 	if !errors.Is(err, http.ErrServerClosed) {

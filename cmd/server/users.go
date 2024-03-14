@@ -43,11 +43,11 @@ func (s *server) AddUser(ctx context.Context, req *connect.Request[userv1.AddUse
 		}
 
 		args := make([]database.AddRolesForUserParams, len(roleIDS))
-		for i, roleID := range roleIDS {
+		for i := range roleIDS {
 			args[i] = database.AddRolesForUserParams{
 				UserID:  userID,
 				Grantor: userID,
-				RoleID:  roleID,
+				RoleID:  roleIDS[i],
 			}
 		}
 

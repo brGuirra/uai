@@ -26,7 +26,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/mock"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
@@ -98,8 +98,8 @@ func TestAddUser(t *testing.T) {
 				mailerMock.EXPECT().Send(req.Email, data, "welcome.tmpl").Return(nil).Once()
 			},
 			checkResponse: func(t *testing.T, res *connect.Response[emptypb.Empty], err error) {
-				assert.NoError(t, err)
-				assert.IsType(t, &emptypb.Empty{}, res.Msg)
+				require.NoError(t, err)
+				require.IsType(t, &emptypb.Empty{}, res.Msg)
 			},
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
 				storeMock.AssertNumberOfCalls(t, "ExecTx", 1)
@@ -128,12 +128,12 @@ func TestAddUser(t *testing.T) {
 				}).Once()
 			},
 			checkResponse: func(t *testing.T, res *connect.Response[emptypb.Empty], err error) {
-				assert.Nil(t, res)
+				require.Nil(t, res)
 
 				var connectErr *connect.Error
-				assert.ErrorAs(t, err, &connectErr)
-				assert.Equal(t, connectErr.Code(), connect.CodeAlreadyExists)
-				assert.Equal(t, connectErr.Message(), "email already in use")
+				require.ErrorAs(t, err, &connectErr)
+				require.Equal(t, connectErr.Code(), connect.CodeAlreadyExists)
+				require.Equal(t, connectErr.Message(), "email already in use")
 			},
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
 				storeMock.AssertNumberOfCalls(t, "ExecTx", 1)
@@ -162,12 +162,12 @@ func TestAddUser(t *testing.T) {
 				}).Once()
 			},
 			checkResponse: func(t *testing.T, res *connect.Response[emptypb.Empty], err error) {
-				assert.Nil(t, res)
+				require.Nil(t, res)
 
 				var connectErr *connect.Error
-				assert.ErrorAs(t, err, &connectErr)
-				assert.Equal(t, connectErr.Code(), connect.CodeInternal)
-				assert.Equal(t, connectErr.Message(), "internal server error")
+				require.ErrorAs(t, err, &connectErr)
+				require.Equal(t, connectErr.Code(), connect.CodeInternal)
+				require.Equal(t, connectErr.Message(), "internal server error")
 			},
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
 				storeMock.AssertNumberOfCalls(t, "ExecTx", 1)
@@ -187,22 +187,22 @@ func TestAddUser(t *testing.T) {
 			},
 			buildStubs: func(_ *userv1.AddUserRequest, storeMock *dbMock.Store, _ *tokenMock.Maker, _ *smptMock.Mailer) {},
 			checkResponse: func(t *testing.T, res *connect.Response[emptypb.Empty], err error) {
-				assert.Nil(t, res)
+				require.Nil(t, res)
 
 				var connectErr *connect.Error
-				assert.ErrorAs(t, err, &connectErr)
-				assert.Equal(t, connectErr.Code(), connect.CodeInvalidArgument)
+				require.ErrorAs(t, err, &connectErr)
+				require.Equal(t, connectErr.Code(), connect.CodeInvalidArgument)
 
 				details := connectErr.Details()
-				assert.Len(t, details, 1)
+				require.Len(t, details, 1)
 
 				detail, err := details[0].Value()
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				violations, ok := detail.(*validatepb.Violations)
-				assert.True(t, ok)
-				assert.Len(t, violations.Violations, 1)
-				assert.Equal(t, "name", violations.Violations[0].FieldPath)
+				require.True(t, ok)
+				require.Len(t, violations.Violations, 1)
+				require.Equal(t, "name", violations.Violations[0].FieldPath)
 			},
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
 				storeMock.AssertNotCalled(t, "ExecTx")
@@ -222,24 +222,24 @@ func TestAddUser(t *testing.T) {
 			},
 			buildStubs: func(_ *userv1.AddUserRequest, storeMock *dbMock.Store, _ *tokenMock.Maker, _ *smptMock.Mailer) {},
 			checkResponse: func(t *testing.T, res *connect.Response[emptypb.Empty], err error) {
-				assert.Nil(t, res)
+				require.Nil(t, res)
 
 				var connectErr *connect.Error
-				assert.ErrorAs(t, err, &connectErr)
-				assert.Equal(t, connectErr.Code(), connect.CodeInvalidArgument)
+				require.ErrorAs(t, err, &connectErr)
+				require.Equal(t, connectErr.Code(), connect.CodeInvalidArgument)
 
 				details := connectErr.Details()
-				assert.Len(t, details, 1)
+				require.Len(t, details, 1)
 
 				detail, err := details[0].Value()
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				violations, ok := detail.(*validatepb.Violations)
-				assert.True(t, ok)
-				assert.Len(t, violations.Violations, 1)
-				assert.Equal(t, "email", violations.Violations[0].FieldPath)
-				assert.Equal(t, "valid_email", violations.Violations[0].ConstraintId)
-				assert.Equal(t, "email must be a valid email", violations.Violations[0].Message)
+				require.True(t, ok)
+				require.Len(t, violations.Violations, 1)
+				require.Equal(t, "email", violations.Violations[0].FieldPath)
+				require.Equal(t, "valid_email", violations.Violations[0].ConstraintId)
+				require.Equal(t, "email must be a valid email", violations.Violations[0].Message)
 			},
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
 				storeMock.AssertNotCalled(t, "ExecTx")
@@ -259,22 +259,22 @@ func TestAddUser(t *testing.T) {
 			},
 			buildStubs: func(_ *userv1.AddUserRequest, storeMock *dbMock.Store, _ *tokenMock.Maker, _ *smptMock.Mailer) {},
 			checkResponse: func(t *testing.T, res *connect.Response[emptypb.Empty], err error) {
-				assert.Nil(t, res)
+				require.Nil(t, res)
 
 				var connectErr *connect.Error
-				assert.ErrorAs(t, err, &connectErr)
-				assert.Equal(t, connectErr.Code(), connect.CodeInvalidArgument)
+				require.ErrorAs(t, err, &connectErr)
+				require.Equal(t, connectErr.Code(), connect.CodeInvalidArgument)
 
 				details := connectErr.Details()
-				assert.Len(t, details, 1)
+				require.Len(t, details, 1)
 
 				detail, err := details[0].Value()
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				violations, ok := detail.(*validatepb.Violations)
-				assert.True(t, ok)
-				assert.Len(t, violations.Violations, 1)
-				assert.Equal(t, "roles", violations.Violations[0].FieldPath)
+				require.True(t, ok)
+				require.Len(t, violations.Violations, 1)
+				require.Equal(t, "roles", violations.Violations[0].FieldPath)
 			},
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
 				storeMock.AssertNotCalled(t, "ExecTx")
@@ -294,23 +294,23 @@ func TestAddUser(t *testing.T) {
 			},
 			buildStubs: func(_ *userv1.AddUserRequest, storeMock *dbMock.Store, _ *tokenMock.Maker, _ *smptMock.Mailer) {},
 			checkResponse: func(t *testing.T, res *connect.Response[emptypb.Empty], err error) {
-				assert.Nil(t, res)
+				require.Nil(t, res)
 
 				var connectErr *connect.Error
-				assert.ErrorAs(t, err, &connectErr)
-				assert.Equal(t, connectErr.Code(), connect.CodeInvalidArgument)
+				require.ErrorAs(t, err, &connectErr)
+				require.Equal(t, connectErr.Code(), connect.CodeInvalidArgument)
 
 				details := connectErr.Details()
-				assert.Len(t, details, 1)
+				require.Len(t, details, 1)
 
 				detail, err := details[0].Value()
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				violations, ok := detail.(*validatepb.Violations)
-				assert.True(t, ok)
-				assert.Len(t, violations.Violations, 1)
-				assert.Equal(t, "roles_specified", violations.Violations[0].ConstraintId)
-				assert.Equal(t, "elemests of roles list must be non-zero", violations.Violations[0].Message)
+				require.True(t, ok)
+				require.Len(t, violations.Violations, 1)
+				require.Equal(t, "roles_specified", violations.Violations[0].ConstraintId)
+				require.Equal(t, "elemests of roles list must be non-zero", violations.Violations[0].Message)
 			},
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
 				storeMock.AssertNotCalled(t, "ExecTx")
@@ -330,22 +330,22 @@ func TestAddUser(t *testing.T) {
 			},
 			buildStubs: func(_ *userv1.AddUserRequest, storeMock *dbMock.Store, _ *tokenMock.Maker, _ *smptMock.Mailer) {},
 			checkResponse: func(t *testing.T, res *connect.Response[emptypb.Empty], err error) {
-				assert.Nil(t, res)
+				require.Nil(t, res)
 
 				var connectErr *connect.Error
-				assert.ErrorAs(t, err, &connectErr)
-				assert.Equal(t, connectErr.Code(), connect.CodeInvalidArgument)
+				require.ErrorAs(t, err, &connectErr)
+				require.Equal(t, connectErr.Code(), connect.CodeInvalidArgument)
 
 				details := connectErr.Details()
-				assert.Len(t, details, 1)
+				require.Len(t, details, 1)
 
 				detail, err := details[0].Value()
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				violations, ok := detail.(*validatepb.Violations)
-				assert.True(t, ok)
-				assert.Len(t, violations.Violations, 1)
-				assert.Equal(t, "roles", violations.Violations[0].FieldPath)
+				require.True(t, ok)
+				require.Len(t, violations.Violations, 1)
+				require.Equal(t, "roles", violations.Violations[0].FieldPath)
 			},
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
 				storeMock.AssertNotCalled(t, "ExecTx")
@@ -365,22 +365,22 @@ func TestAddUser(t *testing.T) {
 			},
 			buildStubs: func(_ *userv1.AddUserRequest, storeMock *dbMock.Store, _ *tokenMock.Maker, _ *smptMock.Mailer) {},
 			checkResponse: func(t *testing.T, res *connect.Response[emptypb.Empty], err error) {
-				assert.Nil(t, res)
+				require.Nil(t, res)
 
 				var connectErr *connect.Error
-				assert.ErrorAs(t, err, &connectErr)
-				assert.Equal(t, connectErr.Code(), connect.CodeInvalidArgument)
+				require.ErrorAs(t, err, &connectErr)
+				require.Equal(t, connectErr.Code(), connect.CodeInvalidArgument)
 
 				details := connectErr.Details()
-				assert.Len(t, details, 1)
+				require.Len(t, details, 1)
 
 				detail, err := details[0].Value()
-				assert.NoError(t, err)
+				require.NoError(t, err)
 
 				violations, ok := detail.(*validatepb.Violations)
-				assert.True(t, ok)
-				assert.Len(t, violations.Violations, 1)
-				assert.Equal(t, "roles", violations.Violations[0].FieldPath)
+				require.True(t, ok)
+				require.Len(t, violations.Violations, 1)
+				require.Equal(t, "roles", violations.Violations[0].FieldPath)
 			},
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
 				storeMock.AssertNotCalled(t, "ExecTx")
@@ -410,7 +410,7 @@ func TestAddUser(t *testing.T) {
 			s := NewServer(&cfg, makerMock, storeMock, slog.Default(), mailerMock)
 
 			validateInterceptor, err := validate.NewInterceptor()
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			srv := setupTestServer(validateInterceptor, &s)
 			defer srv.Close()
