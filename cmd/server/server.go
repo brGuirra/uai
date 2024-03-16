@@ -104,15 +104,21 @@ func (s *server) serve() error {
 		shutdownError <- nil
 	}()
 
+	s.logger.Info(
+		"config",
+		"port", s.config.Port,
+		"env", s.config.Env,
+	)
+
 	err = srv.ListenAndServe()
 	if !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
 
-	// err = <-shutdownError
-	// if err != nil {
-	// 	return err
-	// }
+	err = <-shutdownError
+	if err != nil {
+		return err
+	}
 
 	s.logger.Info(
 		"stopped server",

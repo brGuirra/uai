@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log/slog"
 	"os"
 	"runtime/debug"
 
 	"github.com/brGuirra/uai/internal/config"
+	"github.com/brGuirra/uai/internal/password"
 	"github.com/brGuirra/uai/internal/smtp"
 	"github.com/brGuirra/uai/internal/token"
 
@@ -51,13 +53,17 @@ func run(logger *slog.Logger, configFile string) error {
 		return err
 	}
 
-	s := NewServer(cfg, tokenMaker, store, logger, mailer)
+	hashedPassword, err := password.Hash(cfg.DefaultUser.Password)
+	if err != nil {
+		return fmt.Errorf("failed to hash intial user password: %w", err)
+	}
 
-	s.logger.Info(
-		"config",
-		"port", cfg.Port,
-		"env", cfg.Env,
-	)
+	err = database.CreateInitialAdminUser(store, cfg.DefaultUser.Name, cfg.DefaultUser.Email, hashedPassword)
+	if err != nil {
+		return fmt.Errorf("failed to create initial user: %w", err)
+	}
+
+	s := NewServer(cfg, tokenMaker, store, logger, mailer)
 
 	return s.serve()
 }

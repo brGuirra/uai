@@ -11,6 +11,26 @@ import (
 	"github.com/google/uuid"
 )
 
+const createAdminUser = `-- name: CreateAdminUser :one
+INSERT INTO
+"users" ("name", "email", "status")
+VALUES ($1, $2, $3)
+RETURNING "id"
+`
+
+type CreateAdminUserParams struct {
+	Name   string     `json:"name"`
+	Email  string     `json:"email"`
+	Status UserStatus `json:"status"`
+}
+
+func (q *Queries) CreateAdminUser(ctx context.Context, arg CreateAdminUserParams) (uuid.UUID, error) {
+	row := q.db.QueryRow(ctx, createAdminUser, arg.Name, arg.Email, arg.Status)
+	var id uuid.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO
 "users" ("name", "email")
@@ -28,4 +48,23 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (uuid.UU
 	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
+}
+
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, name, email, status, version, updated_at, created_at FROM "users" WHERE email = $1
+`
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.Status,
+		&i.Version,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+	)
+	return i, err
 }

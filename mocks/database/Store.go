@@ -81,6 +81,112 @@ func (_c *Store_AddRolesForUser_Call) RunAndReturn(run func(context.Context, []d
 	return _c
 }
 
+// CreateAdminUser provides a mock function with given fields: ctx, arg
+func (_m *Store) CreateAdminUser(ctx context.Context, arg database.CreateAdminUserParams) (uuid.UUID, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateAdminUser")
+	}
+
+	var r0 uuid.UUID
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, database.CreateAdminUserParams) (uuid.UUID, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, database.CreateAdminUserParams) uuid.UUID); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(uuid.UUID)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, database.CreateAdminUserParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Store_CreateAdminUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateAdminUser'
+type Store_CreateAdminUser_Call struct {
+	*mock.Call
+}
+
+// CreateAdminUser is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg database.CreateAdminUserParams
+func (_e *Store_Expecter) CreateAdminUser(ctx interface{}, arg interface{}) *Store_CreateAdminUser_Call {
+	return &Store_CreateAdminUser_Call{Call: _e.mock.On("CreateAdminUser", ctx, arg)}
+}
+
+func (_c *Store_CreateAdminUser_Call) Run(run func(ctx context.Context, arg database.CreateAdminUserParams)) *Store_CreateAdminUser_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(database.CreateAdminUserParams))
+	})
+	return _c
+}
+
+func (_c *Store_CreateAdminUser_Call) Return(_a0 uuid.UUID, _a1 error) *Store_CreateAdminUser_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Store_CreateAdminUser_Call) RunAndReturn(run func(context.Context, database.CreateAdminUserParams) (uuid.UUID, error)) *Store_CreateAdminUser_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CreateCredentials provides a mock function with given fields: ctx, arg
+func (_m *Store) CreateCredentials(ctx context.Context, arg database.CreateCredentialsParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateCredentials")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, database.CreateCredentialsParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Store_CreateCredentials_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateCredentials'
+type Store_CreateCredentials_Call struct {
+	*mock.Call
+}
+
+// CreateCredentials is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg database.CreateCredentialsParams
+func (_e *Store_Expecter) CreateCredentials(ctx interface{}, arg interface{}) *Store_CreateCredentials_Call {
+	return &Store_CreateCredentials_Call{Call: _e.mock.On("CreateCredentials", ctx, arg)}
+}
+
+func (_c *Store_CreateCredentials_Call) Run(run func(ctx context.Context, arg database.CreateCredentialsParams)) *Store_CreateCredentials_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(database.CreateCredentialsParams))
+	})
+	return _c
+}
+
+func (_c *Store_CreateCredentials_Call) Return(_a0 error) *Store_CreateCredentials_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *Store_CreateCredentials_Call) RunAndReturn(run func(context.Context, database.CreateCredentialsParams) error) *Store_CreateCredentials_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateUser provides a mock function with given fields: ctx, arg
 func (_m *Store) CreateUser(ctx context.Context, arg database.CreateUserParams) (uuid.UUID, error) {
 	ret := _m.Called(ctx, arg)
@@ -242,6 +348,63 @@ func (_c *Store_GetRolesByCodes_Call) Return(_a0 []uuid.UUID, _a1 error) *Store_
 }
 
 func (_c *Store_GetRolesByCodes_Call) RunAndReturn(run func(context.Context, []string) ([]uuid.UUID, error)) *Store_GetRolesByCodes_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetUserByEmail provides a mock function with given fields: ctx, email
+func (_m *Store) GetUserByEmail(ctx context.Context, email string) (database.User, error) {
+	ret := _m.Called(ctx, email)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetUserByEmail")
+	}
+
+	var r0 database.User
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (database.User, error)); ok {
+		return rf(ctx, email)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) database.User); ok {
+		r0 = rf(ctx, email)
+	} else {
+		r0 = ret.Get(0).(database.User)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, email)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Store_GetUserByEmail_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetUserByEmail'
+type Store_GetUserByEmail_Call struct {
+	*mock.Call
+}
+
+// GetUserByEmail is a helper method to define mock.On call
+//   - ctx context.Context
+//   - email string
+func (_e *Store_Expecter) GetUserByEmail(ctx interface{}, email interface{}) *Store_GetUserByEmail_Call {
+	return &Store_GetUserByEmail_Call{Call: _e.mock.On("GetUserByEmail", ctx, email)}
+}
+
+func (_c *Store_GetUserByEmail_Call) Run(run func(ctx context.Context, email string)) *Store_GetUserByEmail_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *Store_GetUserByEmail_Call) Return(_a0 database.User, _a1 error) *Store_GetUserByEmail_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Store_GetUserByEmail_Call) RunAndReturn(run func(context.Context, string) (database.User, error)) *Store_GetUserByEmail_Call {
 	_c.Call.Return(run)
 	return _c
 }

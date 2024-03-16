@@ -26,8 +26,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 

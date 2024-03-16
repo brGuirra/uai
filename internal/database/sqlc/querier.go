@@ -12,8 +12,11 @@ import (
 
 type Querier interface {
 	AddRolesForUser(ctx context.Context, arg []AddRolesForUserParams) (int64, error)
+	CreateAdminUser(ctx context.Context, arg CreateAdminUserParams) (uuid.UUID, error)
+	CreateCredentials(ctx context.Context, arg CreateCredentialsParams) error
 	CreateUser(ctx context.Context, arg CreateUserParams) (uuid.UUID, error)
 	GetRolesByCodes(ctx context.Context, codes []string) ([]uuid.UUID, error)
+	GetUserByEmail(ctx context.Context, email string) (User, error)
 }
 
 var _ Querier = (*Queries)(nil)
