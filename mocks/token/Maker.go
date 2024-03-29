@@ -67,9 +67,9 @@ func (_c *Maker_CreateToken_Call) RunAndReturn(run func(string, token.TokenScope
 	return _c
 }
 
-// VerifyToken provides a mock function with given fields: _a0
-func (_m *Maker) VerifyToken(_a0 string) (*token.Payload, error) {
-	ret := _m.Called(_a0)
+// VerifyToken provides a mock function with given fields: _a0, requiredScope
+func (_m *Maker) VerifyToken(_a0 string, requiredScope token.TokenScope) (*token.Payload, error) {
+	ret := _m.Called(_a0, requiredScope)
 
 	if len(ret) == 0 {
 		panic("no return value specified for VerifyToken")
@@ -77,19 +77,19 @@ func (_m *Maker) VerifyToken(_a0 string) (*token.Payload, error) {
 
 	var r0 *token.Payload
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string) (*token.Payload, error)); ok {
-		return rf(_a0)
+	if rf, ok := ret.Get(0).(func(string, token.TokenScope) (*token.Payload, error)); ok {
+		return rf(_a0, requiredScope)
 	}
-	if rf, ok := ret.Get(0).(func(string) *token.Payload); ok {
-		r0 = rf(_a0)
+	if rf, ok := ret.Get(0).(func(string, token.TokenScope) *token.Payload); ok {
+		r0 = rf(_a0, requiredScope)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*token.Payload)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(string) error); ok {
-		r1 = rf(_a0)
+	if rf, ok := ret.Get(1).(func(string, token.TokenScope) error); ok {
+		r1 = rf(_a0, requiredScope)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -104,13 +104,14 @@ type Maker_VerifyToken_Call struct {
 
 // VerifyToken is a helper method to define mock.On call
 //   - _a0 string
-func (_e *Maker_Expecter) VerifyToken(_a0 interface{}) *Maker_VerifyToken_Call {
-	return &Maker_VerifyToken_Call{Call: _e.mock.On("VerifyToken", _a0)}
+//   - requiredScope token.TokenScope
+func (_e *Maker_Expecter) VerifyToken(_a0 interface{}, requiredScope interface{}) *Maker_VerifyToken_Call {
+	return &Maker_VerifyToken_Call{Call: _e.mock.On("VerifyToken", _a0, requiredScope)}
 }
 
-func (_c *Maker_VerifyToken_Call) Run(run func(_a0 string)) *Maker_VerifyToken_Call {
+func (_c *Maker_VerifyToken_Call) Run(run func(_a0 string, requiredScope token.TokenScope)) *Maker_VerifyToken_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string))
+		run(args[0].(string), args[1].(token.TokenScope))
 	})
 	return _c
 }
@@ -120,7 +121,7 @@ func (_c *Maker_VerifyToken_Call) Return(_a0 *token.Payload, _a1 error) *Maker_V
 	return _c
 }
 
-func (_c *Maker_VerifyToken_Call) RunAndReturn(run func(string) (*token.Payload, error)) *Maker_VerifyToken_Call {
+func (_c *Maker_VerifyToken_Call) RunAndReturn(run func(string, token.TokenScope) (*token.Payload, error)) *Maker_VerifyToken_Call {
 	_c.Call.Return(run)
 	return _c
 }

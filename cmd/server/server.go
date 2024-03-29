@@ -18,6 +18,7 @@ import (
 	"github.com/brGuirra/uai/internal/config"
 	database "github.com/brGuirra/uai/internal/database/sqlc"
 	"github.com/brGuirra/uai/internal/gen/user/v1/userv1connect"
+	"github.com/brGuirra/uai/internal/password"
 	"github.com/brGuirra/uai/internal/smtp"
 	"github.com/brGuirra/uai/internal/token"
 	"golang.org/x/net/http2"
@@ -26,21 +27,23 @@ import (
 
 type server struct {
 	userv1connect.UnimplementedUserServiceHandler
-	tokenMaker token.Maker
-	store      database.Store
-	config     *config.Config
-	logger     *slog.Logger
-	mailer     smtp.Mailer
-	wg         sync.WaitGroup
+	tokenMaker     token.Maker
+	store          database.Store
+	config         *config.Config
+	logger         *slog.Logger
+	mailer         smtp.Mailer
+	passwordHasher password.Hasher
+	wg             sync.WaitGroup
 }
 
-func NewServer(config *config.Config, tokenMaker token.Maker, store database.Store, logger *slog.Logger, mailer smtp.Mailer) server {
+func NewServer(config *config.Config, tokenMaker token.Maker, store database.Store, logger *slog.Logger, mailer smtp.Mailer, passwordHasher password.Hasher) server {
 	return server{
-		config:     config,
-		tokenMaker: tokenMaker,
-		store:      store,
-		logger:     logger,
-		mailer:     mailer,
+		config:         config,
+		tokenMaker:     tokenMaker,
+		store:          store,
+		logger:         logger,
+		mailer:         mailer,
+		passwordHasher: passwordHasher,
 	}
 }
 
@@ -65,6 +68,10 @@ func (s *server) serve() error {
 		grpcreflect.NewStaticReflector(userv1connect.UserServiceName),
 		compress1KB,
 	))
+
+	// token := s.tokenMaker.CreateToken("c5aeeb31-ae63-4b9d-853f-53713b409f0f", token.ScopeActivation)
+	//
+	// s.logger.Info("Generated token", "token", token)
 
 	srv := &http.Server{
 		Addr:              fmt.Sprintf("0.0.0.0:%d", s.config.Port),

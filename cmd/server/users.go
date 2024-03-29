@@ -22,11 +22,11 @@ var roleCodesMapper = map[userv1.Role]string{
 
 func (s *server) AddUser(ctx context.Context, req *connect.Request[userv1.AddUserRequest]) (*connect.Response[emptypb.Empty], error) {
 	var userID uuid.UUID
-	err := s.store.ExecTx(context.Background(), func(q database.Querier) error {
+	err := s.store.ExecTx(ctx, func(q database.Querier) error {
 		var err error
 		userID, err = q.CreateUser(ctx, database.CreateUserParams{
-			Name:  req.Msg.Name,
-			Email: req.Msg.Email,
+			Name:  req.Msg.GetName(),
+			Email: req.Msg.GetEmail(),
 		})
 		if err != nil {
 			return err
@@ -86,4 +86,47 @@ func (s *server) AddUser(ctx context.Context, req *connect.Request[userv1.AddUse
 	})
 
 	return connect.NewResponse(&emptypb.Empty{}), nil
+}
+
+func (s *server) ActivateUser(ctx context.Context, req *connect.Request[userv1.ActivateUserRequest]) (*connect.Response[userv1.ActivateUserResponse], error) {
+	payload, err := s.tokenMaker.VerifyToken(req.Msg.GetActivationToken(), token.ScopeActivation)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnauthenticated, err)
+	}
+
+	user, err := s.store.GetUserByID(ctx, uuid.MustParse(payload.UserID))
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnauthenticated, token.ErrInvalidToken)
+	}
+
+	hashed_password, err := s.passwordHasher.Hash(req.Msg.GetPassword())
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal server error"))
+	}
+
+	err = s.store.ExecTx(ctx, func(q database.Querier) error {
+		err := q.ActivateUser(ctx, user.ID)
+		if err != nil {
+			return err
+		}
+
+		err = q.CreateCredentials(ctx, database.CreateCredentialsParams{
+			UserID:         user.ID,
+			Email:          user.Email,
+			HashedPassword: hashed_password,
+		})
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInternal, errors.New("internal server error"))
+	}
+
+	authenticationToken := s.tokenMaker.CreateToken(user.ID.String(), token.ScopeAuthentication)
+	return connect.NewResponse(&userv1.ActivateUserResponse{
+		AuthenticationToken: authenticationToken,
+	}), nil
 }

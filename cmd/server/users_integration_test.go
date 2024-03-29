@@ -20,6 +20,7 @@ import (
 	"github.com/brGuirra/uai/internal/gen/user/v1/userv1connect"
 	"github.com/brGuirra/uai/internal/token"
 	dbMock "github.com/brGuirra/uai/mocks/database"
+	passwordMock "github.com/brGuirra/uai/mocks/password"
 	smptMock "github.com/brGuirra/uai/mocks/smtp"
 	tokenMock "github.com/brGuirra/uai/mocks/token"
 	"github.com/brianvoe/gofakeit/v6"
@@ -43,21 +44,17 @@ func setupTestServer(interceptor *validate.Interceptor, s *server) *httptest.Ser
 	return server
 }
 
-func setupClients(srv *httptest.Server) []userv1connect.UserServiceClient {
-	connectClient := userv1connect.NewUserServiceClient(srv.Client(), srv.URL)
-	gRPCClient := userv1connect.NewUserServiceClient(srv.Client(), srv.URL, connect.WithGRPC())
-	webRPCClient := userv1connect.NewUserServiceClient(srv.Client(), srv.URL, connect.WithGRPCWeb())
-
-	return []userv1connect.UserServiceClient{connectClient, gRPCClient, webRPCClient}
+func setupClient(srv *httptest.Server) userv1connect.UserServiceClient {
+	return userv1connect.NewUserServiceClient(srv.Client(), srv.URL)
 }
 
 func TestAddUser(t *testing.T) {
 	testCases := []struct {
+		name          string
 		req           *userv1.AddUserRequest
 		buildStubs    func(req *userv1.AddUserRequest, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer)
-		checkResponse func(t *testing.T, res *connect.Response[emptypb.Empty], err error)
 		checkMocks    func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer)
-		name          string
+		checkResponse func(t *testing.T, res *connect.Response[emptypb.Empty], err error)
 	}{
 		{
 			name: "Success",
@@ -71,10 +68,10 @@ func TestAddUser(t *testing.T) {
 				storeMock.EXPECT().CreateUser(
 					mock.Anything,
 					database.CreateUserParams{Name: req.Name, Email: req.Email}).
-					Return(fakeUserID, nil).Once()
+					Return(fakeUserID, nil)
 
 				fakeRoleIDS := []uuid.UUID{uuid.MustParse(gofakeit.UUID())}
-				storeMock.EXPECT().GetRolesByCodes(mock.Anything, []string{"employee"}).Return(fakeRoleIDS, nil).Once()
+				storeMock.EXPECT().GetRolesByCodes(mock.Anything, []string{"employee"}).Return(fakeRoleIDS, nil)
 
 				storeMock.EXPECT().AddRolesForUser(mock.Anything, []database.AddRolesForUserParams{
 					{
@@ -82,20 +79,20 @@ func TestAddUser(t *testing.T) {
 						Grantor: fakeUserID,
 						RoleID:  fakeRoleIDS[0],
 					},
-				}).Return(1, nil).Once()
+				}).Return(1, nil)
 
 				storeMock.EXPECT().ExecTx(mock.Anything, mock.Anything).RunAndReturn(func(_ context.Context, fn func(database.Querier) error) error {
 					return fn(storeMock)
-				}).Once()
+				})
 
 				fakeToken := gofakeit.Word()
-				makerMock.EXPECT().CreateToken(fakeUserID.String(), token.ScopeActivation).Return(fakeToken).Once()
+				makerMock.EXPECT().CreateToken(fakeUserID.String(), token.ScopeActivation).Return(fakeToken)
 
 				data := map[string]any{
 					"activationToken": fakeToken,
 					"userID":          fakeUserID,
 				}
-				mailerMock.EXPECT().Send(req.Email, data, "welcome.tmpl").Return(nil).Once()
+				mailerMock.EXPECT().Send(req.Email, data, "welcome.tmpl").Return(nil)
 			},
 			checkResponse: func(t *testing.T, res *connect.Response[emptypb.Empty], err error) {
 				require.NoError(t, err)
@@ -121,11 +118,11 @@ func TestAddUser(t *testing.T) {
 				storeMock.EXPECT().CreateUser(
 					mock.Anything,
 					database.CreateUserParams{Name: req.Name, Email: req.Email}).
-					Return(uuid.Nil, &pgconn.PgError{Code: pgerrcode.UniqueViolation}).Once()
+					Return(uuid.Nil, &pgconn.PgError{Code: pgerrcode.UniqueViolation})
 
 				storeMock.EXPECT().ExecTx(mock.Anything, mock.Anything).RunAndReturn(func(_ context.Context, fn func(database.Querier) error) error {
 					return fn(storeMock)
-				}).Once()
+				})
 			},
 			checkResponse: func(t *testing.T, res *connect.Response[emptypb.Empty], err error) {
 				require.Nil(t, res)
@@ -138,10 +135,10 @@ func TestAddUser(t *testing.T) {
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
 				storeMock.AssertNumberOfCalls(t, "ExecTx", 1)
 				storeMock.AssertNumberOfCalls(t, "CreateUser", 1)
-				storeMock.AssertNotCalled(t, "GetRolesByCodes")
-				storeMock.AssertNotCalled(t, "AddRolesForUser")
-				makerMock.AssertNotCalled(t, "CreateToken")
-				mailerMock.AssertNotCalled(t, "Send")
+				storeMock.AssertNumberOfCalls(t, "GetRolesByCodes", 0)
+				storeMock.AssertNumberOfCalls(t, "AddRolesForUser", 0)
+				makerMock.AssertNumberOfCalls(t, "CreateToken", 0)
+				mailerMock.AssertNumberOfCalls(t, "Send", 0)
 			},
 		},
 		{
@@ -155,11 +152,11 @@ func TestAddUser(t *testing.T) {
 				storeMock.EXPECT().CreateUser(
 					mock.Anything,
 					database.CreateUserParams{Name: req.Name, Email: req.Email}).
-					Return(uuid.Nil, gofakeit.Error()).Once()
+					Return(uuid.Nil, gofakeit.Error())
 
 				storeMock.EXPECT().ExecTx(mock.Anything, mock.Anything).RunAndReturn(func(_ context.Context, fn func(database.Querier) error) error {
 					return fn(storeMock)
-				}).Once()
+				})
 			},
 			checkResponse: func(t *testing.T, res *connect.Response[emptypb.Empty], err error) {
 				require.Nil(t, res)
@@ -172,10 +169,10 @@ func TestAddUser(t *testing.T) {
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
 				storeMock.AssertNumberOfCalls(t, "ExecTx", 1)
 				storeMock.AssertNumberOfCalls(t, "CreateUser", 1)
-				storeMock.AssertNotCalled(t, "GetRolesByCodes")
-				storeMock.AssertNotCalled(t, "AddRolesForUser")
-				makerMock.AssertNotCalled(t, "CreateToken")
-				mailerMock.AssertNotCalled(t, "Send")
+				storeMock.AssertNumberOfCalls(t, "GetRolesByCodes", 0)
+				storeMock.AssertNumberOfCalls(t, "AddRolesForUser", 0)
+				makerMock.AssertNumberOfCalls(t, "CreateToken", 0)
+				mailerMock.AssertNumberOfCalls(t, "Send", 0)
 			},
 		},
 		{
@@ -205,12 +202,12 @@ func TestAddUser(t *testing.T) {
 				require.Equal(t, "name", violations.Violations[0].FieldPath)
 			},
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
-				storeMock.AssertNotCalled(t, "ExecTx")
-				storeMock.AssertNotCalled(t, "CreateUser")
-				storeMock.AssertNotCalled(t, "GetRolesByCodes")
-				storeMock.AssertNotCalled(t, "AddRolesForUser")
-				makerMock.AssertNotCalled(t, "CreateToken")
-				mailerMock.AssertNotCalled(t, "Send")
+				storeMock.AssertNumberOfCalls(t, "ExecTx", 0)
+				storeMock.AssertNumberOfCalls(t, "CreateUser", 0)
+				storeMock.AssertNumberOfCalls(t, "GetRolesByCodes", 0)
+				storeMock.AssertNumberOfCalls(t, "AddRolesForUser", 0)
+				makerMock.AssertNumberOfCalls(t, "CreateToken", 0)
+				mailerMock.AssertNumberOfCalls(t, "Send", 0)
 			},
 		},
 		{
@@ -242,12 +239,12 @@ func TestAddUser(t *testing.T) {
 				require.Equal(t, "email must be a valid email", violations.Violations[0].Message)
 			},
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
-				storeMock.AssertNotCalled(t, "ExecTx")
-				storeMock.AssertNotCalled(t, "CreateUser")
-				storeMock.AssertNotCalled(t, "GetRolesByCodes")
-				storeMock.AssertNotCalled(t, "AddRolesForUser")
-				makerMock.AssertNotCalled(t, "CreateToken")
-				mailerMock.AssertNotCalled(t, "Send")
+				storeMock.AssertNumberOfCalls(t, "ExecTx", 0)
+				storeMock.AssertNumberOfCalls(t, "CreateUser", 0)
+				storeMock.AssertNumberOfCalls(t, "GetRolesByCodes", 0)
+				storeMock.AssertNumberOfCalls(t, "AddRolesForUser", 0)
+				makerMock.AssertNumberOfCalls(t, "CreateToken", 0)
+				mailerMock.AssertNumberOfCalls(t, "Send", 0)
 			},
 		},
 		{
@@ -277,12 +274,12 @@ func TestAddUser(t *testing.T) {
 				require.Equal(t, "roles", violations.Violations[0].FieldPath)
 			},
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
-				storeMock.AssertNotCalled(t, "ExecTx")
-				storeMock.AssertNotCalled(t, "CreateUser")
-				storeMock.AssertNotCalled(t, "GetRolesByCodes")
-				storeMock.AssertNotCalled(t, "AddRolesForUser")
-				makerMock.AssertNotCalled(t, "CreateToken")
-				mailerMock.AssertNotCalled(t, "Send")
+				storeMock.AssertNumberOfCalls(t, "ExecTx", 0)
+				storeMock.AssertNumberOfCalls(t, "CreateUser", 0)
+				storeMock.AssertNumberOfCalls(t, "GetRolesByCodes", 0)
+				storeMock.AssertNumberOfCalls(t, "AddRolesForUser", 0)
+				makerMock.AssertNumberOfCalls(t, "CreateToken", 0)
+				mailerMock.AssertNumberOfCalls(t, "Send", 0)
 			},
 		},
 		{
@@ -313,12 +310,12 @@ func TestAddUser(t *testing.T) {
 				require.Equal(t, "elemests of roles list must be non-zero", violations.Violations[0].Message)
 			},
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
-				storeMock.AssertNotCalled(t, "ExecTx")
-				storeMock.AssertNotCalled(t, "CreateUser")
-				storeMock.AssertNotCalled(t, "GetRolesByCodes")
-				storeMock.AssertNotCalled(t, "AddRolesForUser")
-				makerMock.AssertNotCalled(t, "CreateToken")
-				mailerMock.AssertNotCalled(t, "Send")
+				storeMock.AssertNumberOfCalls(t, "ExecTx", 0)
+				storeMock.AssertNumberOfCalls(t, "CreateUser", 0)
+				storeMock.AssertNumberOfCalls(t, "GetRolesByCodes", 0)
+				storeMock.AssertNumberOfCalls(t, "AddRolesForUser", 0)
+				makerMock.AssertNumberOfCalls(t, "CreateToken", 0)
+				mailerMock.AssertNumberOfCalls(t, "Send", 0)
 			},
 		},
 		{
@@ -348,12 +345,12 @@ func TestAddUser(t *testing.T) {
 				require.Equal(t, "roles", violations.Violations[0].FieldPath)
 			},
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
-				storeMock.AssertNotCalled(t, "ExecTx")
-				storeMock.AssertNotCalled(t, "CreateUser")
-				storeMock.AssertNotCalled(t, "GetRolesByCodes")
-				storeMock.AssertNotCalled(t, "AddRolesForUser")
-				makerMock.AssertNotCalled(t, "CreateToken")
-				mailerMock.AssertNotCalled(t, "Send")
+				storeMock.AssertNumberOfCalls(t, "ExecTx", 0)
+				storeMock.AssertNumberOfCalls(t, "CreateUser", 0)
+				storeMock.AssertNumberOfCalls(t, "GetRolesByCodes", 0)
+				storeMock.AssertNumberOfCalls(t, "AddRolesForUser", 0)
+				makerMock.AssertNumberOfCalls(t, "CreateToken", 0)
+				mailerMock.AssertNumberOfCalls(t, "Send", 0)
 			},
 		},
 		{
@@ -383,12 +380,12 @@ func TestAddUser(t *testing.T) {
 				require.Equal(t, "roles", violations.Violations[0].FieldPath)
 			},
 			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, mailerMock *smptMock.Mailer) {
-				storeMock.AssertNotCalled(t, "ExecTx")
-				storeMock.AssertNotCalled(t, "CreateUser")
-				storeMock.AssertNotCalled(t, "GetRolesByCodes")
-				storeMock.AssertNotCalled(t, "AddRolesForUser")
-				makerMock.AssertNotCalled(t, "CreateToken")
-				mailerMock.AssertNotCalled(t, "Send")
+				storeMock.AssertNumberOfCalls(t, "ExecTx", 0)
+				storeMock.AssertNumberOfCalls(t, "CreateUser", 0)
+				storeMock.AssertNumberOfCalls(t, "GetRolesByCodes", 0)
+				storeMock.AssertNumberOfCalls(t, "AddRolesForUser", 0)
+				makerMock.AssertNumberOfCalls(t, "CreateToken", 0)
+				mailerMock.AssertNumberOfCalls(t, "Send", 0)
 			},
 		},
 	}
@@ -407,7 +404,7 @@ func TestAddUser(t *testing.T) {
 			storeMock := new(dbMock.Store)
 			mailerMock := new(smptMock.Mailer)
 
-			s := NewServer(&cfg, makerMock, storeMock, slog.Default(), mailerMock)
+			s := NewServer(&cfg, makerMock, storeMock, slog.Default(), mailerMock, nil)
 
 			validateInterceptor, err := validate.NewInterceptor()
 			require.NoError(t, err)
@@ -415,15 +412,495 @@ func TestAddUser(t *testing.T) {
 			srv := setupTestServer(validateInterceptor, &s)
 			defer srv.Close()
 
-			clients := setupClients(srv)
+			client := setupClient(srv)
 
-			for _, client := range clients {
-				tc.buildStubs(tc.req, storeMock, makerMock, mailerMock)
+			tc.buildStubs(tc.req, storeMock, makerMock, mailerMock)
 
-				res, err := client.AddUser(context.Background(), connect.NewRequest(tc.req))
+			res, err := client.AddUser(context.Background(), connect.NewRequest(tc.req))
 
-				tc.checkResponse(t, res, err)
+			tc.checkResponse(t, res, err)
+			tc.checkMocks(t, storeMock, makerMock, mailerMock)
+		})
+	}
+}
+
+func TestActivateUser(t *testing.T) {
+	testCases := []struct {
+		name          string
+		req           *userv1.ActivateUserRequest
+		expectedRes   *userv1.ActivateUserResponse
+		buildStubs    func(req *userv1.ActivateUserRequest, expectedRes *userv1.ActivateUserResponse, storeMock *dbMock.Store, makerMock *tokenMock.Maker, hasherMock *passwordMock.Hasher)
+		checkResponse func(t *testing.T, expectedRes *userv1.ActivateUserResponse, res *connect.Response[userv1.ActivateUserResponse], err error)
+		checkMocks    func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, hasherMock *passwordMock.Hasher)
+	}{
+		{
+			name: "Success",
+			req: &userv1.ActivateUserRequest{
+				ActivationToken: gofakeit.Word(),
+				Password:        gofakeit.Password(true, true, true, true, false, 8),
+			},
+			expectedRes: &userv1.ActivateUserResponse{
+				AuthenticationToken: gofakeit.Word(),
+			},
+			buildStubs: func(req *userv1.ActivateUserRequest, expectedRes *userv1.ActivateUserResponse, storeMock *dbMock.Store, makerMock *tokenMock.Maker, hasherMock *passwordMock.Hasher) {
+				fakePayload := token.Payload{
+					UserID: gofakeit.UUID(),
+					Scope:  token.ScopeActivation,
+				}
+				makerMock.EXPECT().
+					VerifyToken(req.GetActivationToken(), token.ScopeActivation).
+					Return(&fakePayload, nil)
+
+				fakeUser := database.User{
+					ID:    uuid.MustParse(fakePayload.UserID),
+					Email: gofakeit.Email(),
+				}
+				storeMock.EXPECT().
+					GetUserByID(mock.Anything, uuid.MustParse(fakePayload.UserID)).
+					Return(fakeUser, nil)
+
+				fakeHashedPassword := gofakeit.Word()
+				hasherMock.EXPECT().
+					Hash(req.GetPassword()).
+					Return(fakeHashedPassword, nil)
+
+				storeMock.EXPECT().
+					ActivateUser(mock.Anything, fakeUser.ID).
+					Return(nil)
+
+				storeMock.EXPECT().
+					CreateCredentials(mock.Anything, database.CreateCredentialsParams{
+						UserID:         fakeUser.ID,
+						Email:          fakeUser.Email,
+						HashedPassword: fakeHashedPassword,
+					}).
+					Return(nil)
+
+				storeMock.EXPECT().
+					ExecTx(mock.Anything, mock.Anything).
+					RunAndReturn(func(_ context.Context, fn func(database.Querier) error) error {
+						return fn(storeMock)
+					})
+
+				makerMock.EXPECT().
+					CreateToken(fakeUser.ID.String(), token.ScopeAuthentication).
+					Return(expectedRes.GetAuthenticationToken())
+			},
+			checkResponse: func(t *testing.T, expectedRes *userv1.ActivateUserResponse, res *connect.Response[userv1.ActivateUserResponse], err error) {
+				require.NoError(t, err)
+				require.Equal(t, expectedRes.GetAuthenticationToken(), res.Msg.GetAuthenticationToken())
+			},
+			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, hasherMock *passwordMock.Hasher) {
+				makerMock.AssertNumberOfCalls(t, "VerifyToken", 1)
+				storeMock.AssertNumberOfCalls(t, "GetUserByID", 1)
+				hasherMock.AssertNumberOfCalls(t, "Hash", 1)
+				storeMock.AssertNumberOfCalls(t, "ExecTx", 1)
+				storeMock.AssertNumberOfCalls(t, "ActivateUser", 1)
+				storeMock.AssertNumberOfCalls(t, "CreateCredentials", 1)
+				makerMock.AssertNumberOfCalls(t, "CreateToken", 1)
+			},
+		},
+		{
+			name: "Invalid Token",
+			req: &userv1.ActivateUserRequest{
+				ActivationToken: gofakeit.Word(),
+				Password:        gofakeit.Password(true, true, true, true, false, 8),
+			},
+			expectedRes: nil,
+			buildStubs: func(req *userv1.ActivateUserRequest, _ *userv1.ActivateUserResponse, storeMock *dbMock.Store, makerMock *tokenMock.Maker, hasherMock *passwordMock.Hasher) {
+				makerMock.EXPECT().
+					VerifyToken(req.GetActivationToken(), token.ScopeActivation).
+					Return(nil, token.ErrInvalidToken)
+			},
+			checkResponse: func(t *testing.T, _ *userv1.ActivateUserResponse, res *connect.Response[userv1.ActivateUserResponse], err error) {
+				var connectErr *connect.Error
+				require.ErrorAs(t, err, &connectErr)
+				require.Equal(t, connectErr.Code(), connect.CodeUnauthenticated)
+				require.Equal(t, connectErr.Message(), token.ErrInvalidToken.Error())
+
+				require.Nil(t, res)
+			},
+			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, hasherMock *passwordMock.Hasher) {
+				makerMock.AssertNumberOfCalls(t, "VerifyToken", 1)
+				storeMock.AssertNumberOfCalls(t, "GetUserByID", 0)
+				hasherMock.AssertNumberOfCalls(t, "Hash", 0)
+				storeMock.AssertNumberOfCalls(t, "ExecTx", 0)
+				storeMock.AssertNumberOfCalls(t, "ActivateUser", 0)
+				storeMock.AssertNumberOfCalls(t, "CreateCredentials", 0)
+				makerMock.AssertNumberOfCalls(t, "CreateToken", 0)
+			},
+		},
+		{
+			name: "Invalid Token Scope",
+			req: &userv1.ActivateUserRequest{
+				ActivationToken: gofakeit.Word(),
+				Password:        gofakeit.Password(true, true, true, true, false, 8),
+			},
+			expectedRes: nil,
+			buildStubs: func(req *userv1.ActivateUserRequest, _ *userv1.ActivateUserResponse, storeMock *dbMock.Store, makerMock *tokenMock.Maker, hasherMock *passwordMock.Hasher) {
+				makerMock.EXPECT().
+					VerifyToken(req.GetActivationToken(), token.ScopeActivation).
+					Return(nil, token.ErrInvalidToken)
+			},
+			checkResponse: func(t *testing.T, _ *userv1.ActivateUserResponse, res *connect.Response[userv1.ActivateUserResponse], err error) {
+				var connectErr *connect.Error
+				require.ErrorAs(t, err, &connectErr)
+				require.Equal(t, connectErr.Code(), connect.CodeUnauthenticated)
+				require.Equal(t, connectErr.Message(), token.ErrInvalidToken.Error())
+
+				require.Nil(t, res)
+			},
+			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, hasherMock *passwordMock.Hasher) {
+				makerMock.AssertNumberOfCalls(t, "VerifyToken", 1)
+				storeMock.AssertNumberOfCalls(t, "GetUserByID", 0)
+				hasherMock.AssertNumberOfCalls(t, "Hash", 0)
+				storeMock.AssertNumberOfCalls(t, "ExecTx", 0)
+				storeMock.AssertNumberOfCalls(t, "ActivateUser", 0)
+				storeMock.AssertNumberOfCalls(t, "CreateCredentials", 0)
+				makerMock.AssertNumberOfCalls(t, "CreateToken", 0)
+			},
+		},
+		{
+			name: "Expired Token",
+			req: &userv1.ActivateUserRequest{
+				ActivationToken: gofakeit.Word(),
+				Password:        gofakeit.Password(true, true, true, true, false, 8),
+			},
+			expectedRes: nil,
+			buildStubs: func(req *userv1.ActivateUserRequest, _ *userv1.ActivateUserResponse, storeMock *dbMock.Store, makerMock *tokenMock.Maker, hasherMock *passwordMock.Hasher) {
+				makerMock.EXPECT().
+					VerifyToken(req.GetActivationToken(), token.ScopeActivation).
+					Return(nil, token.ErrExpiredToken)
+			},
+			checkResponse: func(t *testing.T, _ *userv1.ActivateUserResponse, res *connect.Response[userv1.ActivateUserResponse], err error) {
+				var connectErr *connect.Error
+				require.ErrorAs(t, err, &connectErr)
+				require.Equal(t, connectErr.Code(), connect.CodeUnauthenticated)
+				require.Equal(t, connectErr.Message(), token.ErrExpiredToken.Error())
+
+				require.Nil(t, res)
+			},
+			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, hasherMock *passwordMock.Hasher) {
+				makerMock.AssertNumberOfCalls(t, "VerifyToken", 1)
+				storeMock.AssertNumberOfCalls(t, "GetUserByID", 0)
+				hasherMock.AssertNumberOfCalls(t, "Hash", 0)
+				storeMock.AssertNumberOfCalls(t, "ExecTx", 0)
+				storeMock.AssertNumberOfCalls(t, "ActivateUser", 0)
+				storeMock.AssertNumberOfCalls(t, "CreateCredentials", 0)
+				makerMock.AssertNumberOfCalls(t, "CreateToken", 0)
+			},
+		},
+		{
+			name: "Invalid User ID In Token Payload",
+			req: &userv1.ActivateUserRequest{
+				ActivationToken: gofakeit.Word(),
+				Password:        gofakeit.Password(true, true, true, true, false, 8),
+			},
+			expectedRes: nil,
+			buildStubs: func(req *userv1.ActivateUserRequest, _ *userv1.ActivateUserResponse, storeMock *dbMock.Store, makerMock *tokenMock.Maker, hasherMock *passwordMock.Hasher) {
+				fakePayload := token.Payload{
+					UserID: gofakeit.UUID(),
+					Scope:  token.ScopeActivation,
+				}
+				makerMock.EXPECT().
+					VerifyToken(req.GetActivationToken(), token.ScopeActivation).
+					Return(&fakePayload, nil)
+
+				storeMock.EXPECT().
+					GetUserByID(mock.Anything, uuid.MustParse(fakePayload.UserID)).
+					Return(database.User{}, gofakeit.Error())
+			},
+			checkResponse: func(t *testing.T, _ *userv1.ActivateUserResponse, res *connect.Response[userv1.ActivateUserResponse], err error) {
+				var connectErr *connect.Error
+				require.ErrorAs(t, err, &connectErr)
+				require.Equal(t, connectErr.Code(), connect.CodeUnauthenticated)
+				require.Equal(t, connectErr.Message(), token.ErrInvalidToken.Error())
+
+				require.Nil(t, res)
+			},
+			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, hasherMock *passwordMock.Hasher) {
+				makerMock.AssertNumberOfCalls(t, "VerifyToken", 1)
+				storeMock.AssertNumberOfCalls(t, "GetUserByID", 1)
+				hasherMock.AssertNumberOfCalls(t, "Hash", 0)
+				storeMock.AssertNumberOfCalls(t, "ExecTx", 0)
+				storeMock.AssertNumberOfCalls(t, "ActivateUser", 0)
+				storeMock.AssertNumberOfCalls(t, "CreateCredentials", 0)
+				makerMock.AssertNumberOfCalls(t, "CreateToken", 0)
+			},
+		},
+		{
+			name: "Password Hashing Fails",
+			req: &userv1.ActivateUserRequest{
+				ActivationToken: gofakeit.Word(),
+				Password:        gofakeit.Password(true, true, true, true, false, 8),
+			},
+			expectedRes: nil,
+			buildStubs: func(req *userv1.ActivateUserRequest, _ *userv1.ActivateUserResponse, storeMock *dbMock.Store, makerMock *tokenMock.Maker, hasherMock *passwordMock.Hasher) {
+				fakePayload := token.Payload{
+					UserID: gofakeit.UUID(),
+					Scope:  token.ScopeActivation,
+				}
+				makerMock.EXPECT().
+					VerifyToken(req.GetActivationToken(), token.ScopeActivation).
+					Return(&fakePayload, nil)
+
+				fakeUser := database.User{
+					ID:    uuid.MustParse(fakePayload.UserID),
+					Email: gofakeit.Email(),
+				}
+				storeMock.EXPECT().
+					GetUserByID(mock.Anything, uuid.MustParse(fakePayload.UserID)).
+					Return(fakeUser, nil)
+
+				hasherMock.EXPECT().
+					Hash(req.GetPassword()).
+					Return("", gofakeit.Error())
+			},
+			checkResponse: func(t *testing.T, _ *userv1.ActivateUserResponse, res *connect.Response[userv1.ActivateUserResponse], err error) {
+				var connectErr *connect.Error
+				require.ErrorAs(t, err, &connectErr)
+				require.Equal(t, connectErr.Code(), connect.CodeInternal)
+				require.Equal(t, connectErr.Message(), "internal server error")
+
+				require.Nil(t, res)
+			},
+			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, hasherMock *passwordMock.Hasher) {
+				makerMock.AssertNumberOfCalls(t, "VerifyToken", 1)
+				storeMock.AssertNumberOfCalls(t, "GetUserByID", 1)
+				hasherMock.AssertNumberOfCalls(t, "Hash", 1)
+				storeMock.AssertNumberOfCalls(t, "ExecTx", 0)
+				storeMock.AssertNumberOfCalls(t, "ActivateUser", 0)
+				storeMock.AssertNumberOfCalls(t, "CreateCredentials", 0)
+				makerMock.AssertNumberOfCalls(t, "CreateToken", 0)
+			},
+		},
+		{
+			name: "User Status Update Fails",
+			req: &userv1.ActivateUserRequest{
+				ActivationToken: gofakeit.Word(),
+				Password:        gofakeit.Password(true, true, true, true, false, 8),
+			},
+			expectedRes: nil,
+			buildStubs: func(req *userv1.ActivateUserRequest, _ *userv1.ActivateUserResponse, storeMock *dbMock.Store, makerMock *tokenMock.Maker, hasherMock *passwordMock.Hasher) {
+				fakePayload := token.Payload{
+					UserID: gofakeit.UUID(),
+					Scope:  token.ScopeActivation,
+				}
+				makerMock.EXPECT().
+					VerifyToken(req.GetActivationToken(), token.ScopeActivation).
+					Return(&fakePayload, nil)
+
+				fakeUser := database.User{
+					ID:    uuid.MustParse(fakePayload.UserID),
+					Email: gofakeit.Email(),
+				}
+				storeMock.EXPECT().
+					GetUserByID(mock.Anything, uuid.MustParse(fakePayload.UserID)).
+					Return(fakeUser, nil)
+
+				fakeHashedPassword := gofakeit.Word()
+				hasherMock.EXPECT().
+					Hash(req.GetPassword()).
+					Return(fakeHashedPassword, nil)
+
+				storeMock.EXPECT().
+					ActivateUser(mock.Anything, fakeUser.ID).
+					Return(gofakeit.Error())
+
+				storeMock.EXPECT().
+					ExecTx(mock.Anything, mock.Anything).
+					RunAndReturn(func(_ context.Context, fn func(database.Querier) error) error {
+						return fn(storeMock)
+					})
+			},
+			checkResponse: func(t *testing.T, _ *userv1.ActivateUserResponse, res *connect.Response[userv1.ActivateUserResponse], err error) {
+				var connectErr *connect.Error
+				require.ErrorAs(t, err, &connectErr)
+				require.Equal(t, connectErr.Code(), connect.CodeInternal)
+				require.Equal(t, connectErr.Message(), "internal server error")
+
+				require.Nil(t, res)
+			},
+			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, hasherMock *passwordMock.Hasher) {
+				makerMock.AssertNumberOfCalls(t, "VerifyToken", 1)
+				storeMock.AssertNumberOfCalls(t, "GetUserByID", 1)
+				hasherMock.AssertNumberOfCalls(t, "Hash", 1)
+				storeMock.AssertNumberOfCalls(t, "ExecTx", 1)
+				storeMock.AssertNumberOfCalls(t, "ActivateUser", 1)
+				storeMock.AssertNumberOfCalls(t, "CreateCredentials", 0)
+				makerMock.AssertNumberOfCalls(t, "CreateToken", 0)
+			},
+		},
+		{
+			name: "Credentials Creation Fails",
+			req: &userv1.ActivateUserRequest{
+				ActivationToken: gofakeit.Word(),
+				Password:        gofakeit.Password(true, true, true, true, false, 8),
+			},
+			expectedRes: nil,
+			buildStubs: func(req *userv1.ActivateUserRequest, _ *userv1.ActivateUserResponse, storeMock *dbMock.Store, makerMock *tokenMock.Maker, hasherMock *passwordMock.Hasher) {
+				fakePayload := token.Payload{
+					UserID: gofakeit.UUID(),
+					Scope:  token.ScopeActivation,
+				}
+				makerMock.EXPECT().
+					VerifyToken(req.GetActivationToken(), token.ScopeActivation).
+					Return(&fakePayload, nil)
+
+				fakeUser := database.User{
+					ID:    uuid.MustParse(fakePayload.UserID),
+					Email: gofakeit.Email(),
+				}
+				storeMock.EXPECT().
+					GetUserByID(mock.Anything, uuid.MustParse(fakePayload.UserID)).
+					Return(fakeUser, nil)
+
+				fakeHashedPassword := gofakeit.Word()
+				hasherMock.EXPECT().
+					Hash(req.GetPassword()).
+					Return(fakeHashedPassword, nil)
+
+				storeMock.EXPECT().
+					ActivateUser(mock.Anything, fakeUser.ID).
+					Return(nil)
+
+				storeMock.EXPECT().
+					CreateCredentials(mock.Anything, database.CreateCredentialsParams{
+						UserID:         fakeUser.ID,
+						Email:          fakeUser.Email,
+						HashedPassword: fakeHashedPassword,
+					}).
+					Return(gofakeit.Error())
+
+				storeMock.EXPECT().
+					ExecTx(mock.Anything, mock.Anything).
+					RunAndReturn(func(_ context.Context, fn func(database.Querier) error) error {
+						return fn(storeMock)
+					})
+			},
+			checkResponse: func(t *testing.T, _ *userv1.ActivateUserResponse, res *connect.Response[userv1.ActivateUserResponse], err error) {
+				var connectErr *connect.Error
+				require.ErrorAs(t, err, &connectErr)
+				require.Equal(t, connectErr.Code(), connect.CodeInternal)
+				require.Equal(t, connectErr.Message(), "internal server error")
+
+				require.Nil(t, res)
+			},
+			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, hasherMock *passwordMock.Hasher) {
+				makerMock.AssertNumberOfCalls(t, "VerifyToken", 1)
+				storeMock.AssertNumberOfCalls(t, "GetUserByID", 1)
+				hasherMock.AssertNumberOfCalls(t, "Hash", 1)
+				storeMock.AssertNumberOfCalls(t, "ExecTx", 1)
+				storeMock.AssertNumberOfCalls(t, "ActivateUser", 1)
+				storeMock.AssertNumberOfCalls(t, "CreateCredentials", 1)
+				makerMock.AssertNumberOfCalls(t, "CreateToken", 0)
+			},
+		},
+		{
+			name: "Empty Authentication Token",
+			req: &userv1.ActivateUserRequest{
+				ActivationToken: "",
+				Password:        gofakeit.Password(true, true, true, true, false, 8),
+			},
+			expectedRes: nil,
+			buildStubs: func(_ *userv1.ActivateUserRequest, _ *userv1.ActivateUserResponse, _ *dbMock.Store, _ *tokenMock.Maker, _ *passwordMock.Hasher) {
+			},
+			checkResponse: func(t *testing.T, _ *userv1.ActivateUserResponse, res *connect.Response[userv1.ActivateUserResponse], err error) {
+				require.Nil(t, res)
+
+				var connectErr *connect.Error
+				require.ErrorAs(t, err, &connectErr)
+				require.Equal(t, connectErr.Code(), connect.CodeInvalidArgument)
+
+				details := connectErr.Details()
+				require.Len(t, details, 1)
+
+				detail, err := details[0].Value()
+				require.NoError(t, err)
+
+				violations, ok := detail.(*validatepb.Violations)
+				require.True(t, ok)
+				require.Len(t, violations.Violations, 1)
+				require.Equal(t, "activation_token", violations.Violations[0].FieldPath)
+			},
+			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, hasherMock *passwordMock.Hasher) {
+				makerMock.AssertNumberOfCalls(t, "VerifyToken", 0)
+				storeMock.AssertNumberOfCalls(t, "GetUserByID", 0)
+				hasherMock.AssertNumberOfCalls(t, "Hash", 0)
+				storeMock.AssertNumberOfCalls(t, "ExecTx", 0)
+				storeMock.AssertNumberOfCalls(t, "ActivateUser", 0)
+				storeMock.AssertNumberOfCalls(t, "CreateCredentials", 0)
+				makerMock.AssertNumberOfCalls(t, "CreateToken", 0)
+			},
+		},
+		{
+			name: "Password Too Short",
+			req: &userv1.ActivateUserRequest{
+				ActivationToken: gofakeit.Word(),
+				Password:        gofakeit.Password(true, true, true, true, false, 6),
+			},
+			expectedRes: nil,
+			buildStubs: func(_ *userv1.ActivateUserRequest, _ *userv1.ActivateUserResponse, _ *dbMock.Store, _ *tokenMock.Maker, _ *passwordMock.Hasher) {
+			},
+			checkResponse: func(t *testing.T, _ *userv1.ActivateUserResponse, res *connect.Response[userv1.ActivateUserResponse], err error) {
+				require.Nil(t, res)
+
+				var connectErr *connect.Error
+				require.ErrorAs(t, err, &connectErr)
+				require.Equal(t, connectErr.Code(), connect.CodeInvalidArgument)
+
+				details := connectErr.Details()
+				require.Len(t, details, 1)
+
+				detail, err := details[0].Value()
+				require.NoError(t, err)
+
+				violations, ok := detail.(*validatepb.Violations)
+				require.True(t, ok)
+				require.Len(t, violations.Violations, 1)
+				require.Equal(t, "password", violations.Violations[0].FieldPath)
+			},
+			checkMocks: func(t *testing.T, storeMock *dbMock.Store, makerMock *tokenMock.Maker, hasherMock *passwordMock.Hasher) {
+				makerMock.AssertNumberOfCalls(t, "VerifyToken", 0)
+				storeMock.AssertNumberOfCalls(t, "GetUserByID", 0)
+				hasherMock.AssertNumberOfCalls(t, "Hash", 0)
+				storeMock.AssertNumberOfCalls(t, "ExecTx", 0)
+				storeMock.AssertNumberOfCalls(t, "ActivateUser", 0)
+				storeMock.AssertNumberOfCalls(t, "CreateCredentials", 0)
+				makerMock.AssertNumberOfCalls(t, "CreateToken", 0)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := config.Config{
+				Port: 4000,
+				Env:  environment.Test,
+				Token: &config.Token{
+					SimmetricKey: gofakeit.DigitN(32),
+				},
 			}
+
+			makerMock := new(tokenMock.Maker)
+			storeMock := new(dbMock.Store)
+			hasherMock := new(passwordMock.Hasher)
+
+			s := NewServer(&cfg, makerMock, storeMock, slog.Default(), nil, hasherMock)
+
+			validateInterceptor, err := validate.NewInterceptor()
+			require.NoError(t, err)
+
+			srv := setupTestServer(validateInterceptor, &s)
+			defer srv.Close()
+
+			client := setupClient(srv)
+			tc.buildStubs(tc.req, tc.expectedRes, storeMock, makerMock, hasherMock)
+
+			res, err := client.ActivateUser(context.Background(), connect.NewRequest(tc.req))
+
+			tc.checkResponse(t, tc.expectedRes, res, err)
+			tc.checkMocks(t, storeMock, makerMock, hasherMock)
 		})
 	}
 }

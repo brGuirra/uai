@@ -41,8 +41,8 @@ func (maker *PasetoMaker) CreateToken(userID string, scope TokenScope) string {
 	return token.V4Encrypt(maker.key, nil)
 }
 
-// VerifyToken checks if a token is valid or not
-func (maker *PasetoMaker) VerifyToken(encrypted string) (*Payload, error) {
+// VerifyToken checks if a token is valid and if the scope is correct
+func (maker *PasetoMaker) VerifyToken(encrypted string, requiredScope TokenScope) (*Payload, error) {
 	token, err := maker.parser.ParseV4Local(maker.key, encrypted, nil)
 	if err != nil {
 		switch err.Error() {
@@ -63,8 +63,12 @@ func (maker *PasetoMaker) VerifyToken(encrypted string) (*Payload, error) {
 		return nil, ErrInvalidToken
 	}
 
+	if TokenScope(scope) != requiredScope {
+		return nil, ErrInvalidToken
+	}
+
 	return &Payload{
-		userID: userID,
-		scope:  TokenScope(scope),
+		UserID: userID,
+		Scope:  TokenScope(scope),
 	}, nil
 }

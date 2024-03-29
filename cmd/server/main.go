@@ -53,7 +53,9 @@ func run(logger *slog.Logger, configFile string) error {
 		return err
 	}
 
-	hashedPassword, err := password.Hash(cfg.DefaultUser.Password)
+	passwordHasher := password.NewPasswordHasher()
+
+	hashedPassword, err := passwordHasher.Hash(cfg.DefaultUser.Password)
 	if err != nil {
 		return fmt.Errorf("failed to hash intial user password: %w", err)
 	}
@@ -63,7 +65,7 @@ func run(logger *slog.Logger, configFile string) error {
 		return fmt.Errorf("failed to create initial user: %w", err)
 	}
 
-	s := NewServer(cfg, tokenMaker, store, logger, mailer)
+	s := NewServer(cfg, tokenMaker, store, logger, mailer, passwordHasher)
 
 	return s.serve()
 }

@@ -11,6 +11,15 @@ import (
 	"github.com/google/uuid"
 )
 
+const activateUser = `-- name: ActivateUser :exec
+UPDATE "users" SET "status" = 'active' WHERE "id" = $1
+`
+
+func (q *Queries) ActivateUser(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, activateUser, id)
+	return err
+}
+
 const createAdminUser = `-- name: CreateAdminUser :one
 INSERT INTO
 "users" ("name", "email", "status")
@@ -51,11 +60,30 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (uuid.UU
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, name, email, status, version, updated_at, created_at FROM "users" WHERE email = $1
+SELECT id, name, email, status, version, updated_at, created_at FROM "users" WHERE "email" = $1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
 	row := q.db.QueryRow(ctx, getUserByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.Status,
+		&i.Version,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getUserByID = `-- name: GetUserByID :one
+SELECT id, name, email, status, version, updated_at, created_at FROM "users" WHERE "id" = $1
+`
+
+func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByID, id)
 	var i User
 	err := row.Scan(
 		&i.ID,

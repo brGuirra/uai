@@ -81,3 +81,64 @@ func TestGetUserByEmail(t *testing.T) {
 		require.Zero(t, user)
 	})
 }
+
+func TestGetUserByID(t *testing.T) {
+	testCases := []struct {
+		name        string
+		userID      uuid.UUID
+		checkResult func(t *testing.T, userID uuid.UUID, user User, err error)
+	}{
+		{
+			name:   "Success",
+			userID: createRandomUser(t),
+			checkResult: func(t *testing.T, userID uuid.UUID, user User, err error) {
+				require.NoError(t, err)
+
+				require.Equal(t, user.ID, userID)
+				require.NotZero(t, user.Email)
+				require.NotZero(t, user.Name)
+				require.Equal(t, user.Status, UserStatusCreated)
+				require.Equal(t, user.Version, int32(1))
+				require.NotZero(t, user.CreatedAt)
+				require.NotZero(t, user.UpdatedAt)
+			},
+		},
+		{
+			name:   "User Not Found",
+			userID: uuid.MustParse(gofakeit.UUID()),
+			checkResult: func(t *testing.T, userID uuid.UUID, user User, err error) {
+				require.ErrorIs(t, err, pgx.ErrNoRows)
+
+				require.Zero(t, user)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			user, err := testStore.GetUserByID(context.Background(), tc.userID)
+			tc.checkResult(t, tc.userID, user, err)
+		})
+	}
+}
+
+func TestActivateUser(t *testing.T) {
+	t.Run("Success", func(t *testing.T) {
+		userID := createRandomUser(t)
+
+		err := testStore.ActivateUser(context.Background(), userID)
+		require.NoError(t, err)
+
+		user, err := testStore.GetUserByID(context.Background(), userID)
+		require.NoError(t, err)
+
+		require.Equal(t, UserStatusActive, user.Status)
+	})
+
+	t.Run("User Not Found", func(t *testing.T) {
+		userID := uuid.MustParse(gofakeit.UUID())
+
+		err := testStore.ActivateUser(context.Background(), userID)
+		require.NoError(t, err)
+	})
+}

@@ -17,3 +17,7 @@ packages:
   github.com/brGuirra/uai/internal/smtp:
     interfaces:
       Mailer:
+
+  github.com/brGuirra/uai/internal/password:
+    interfaces:
+      Hasher:

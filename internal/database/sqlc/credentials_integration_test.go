@@ -16,9 +16,9 @@ import (
 
 func TestCreateCredentials(t *testing.T) {
 	testCases := []struct {
-		checkResult func(t *testing.T, err error)
 		name        string
 		userID      uuid.UUID
+		checkResult func(t *testing.T, err error)
 	}{
 		{
 			name:   "Success",

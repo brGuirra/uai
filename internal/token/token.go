@@ -21,8 +21,8 @@ const (
 
 // Payload is the payload for a token
 type Payload struct {
-	userID string
-	scope  TokenScope
+	UserID string
+	Scope  TokenScope
 }
 
 // getDurationForScope returns the duration for a given scope

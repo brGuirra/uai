@@ -179,14 +179,14 @@ tasks:
     cmds:
       - docker compose --env-file ./.${ENV}.env up -d database_test
       - migrate -path ./internal/database/migrations -database="postgres://${DATABASE_DSN}" -verbose up
-      - gotestsum --format testname ./... -tags=database -db-dsn="${DATABASE_DSN}" {{.CLI_ARGS}}
+      - gotestsum --format dots ./... -tags=database -db-dsn="${DATABASE_DSN}" {{.CLI_ARGS}}
       - docker compose --env-file ./.${ENV}.env stop database_test
     silent: true
   test:integration:
     desc: "Run integration tests"
     dotenv: [".test.env"]
     cmds:
-      - gotestsum --format testname ./... -tags=integration {{.CLI_ARGS}}
+      - gotestsum --format dots ./... -tags=integration {{.CLI_ARGS}}
     silent: true
 
   audit:
